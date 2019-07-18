@@ -80,6 +80,9 @@ public:
     void run()
     {
 #ifndef WIN32
+        be::evcore<be::evstack> sint;
+        be::evcore<be::evstack> sterm;
+
         auto f = [&](auto...) {
             MKREFSTR(stop_str, "stop!");
             cerr() << stop_str << std::endl;
@@ -92,13 +95,10 @@ public:
             return 0;
         };
 
-        be::evcore<be::evstack> sint;
         sint.create(queue_, SIGINT, EV_SIGNAL|EV_PERSIST, f);
-
-        be::evcore<be::evstack> sterm;
-        sterm.create(queue_, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
-
         sint.add();
+
+        sterm.create(queue_, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
         sterm.add();
 #endif // _WIN32
 
