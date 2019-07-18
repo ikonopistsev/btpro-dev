@@ -12,19 +12,19 @@
 
 #include <iostream>
 
-static std::ostream& output(std::ostream& os)
+std::ostream& output(std::ostream& os)
 {
     auto log_time = btdef::date::log_time_text();
     os << log_time << ' ';
     return os;
 }
 
-static std::ostream& cerr()
+std::ostream& cerr()
 {
     return output(std::cerr);
 }
 
-static std::ostream& cout()
+std::ostream& cout()
 {
     return output(std::cout);
 }
@@ -43,8 +43,7 @@ btpro::queue create_queue()
     std::endl(std::cout);
 
 #ifndef _WIN32
-    conf.set_flag(EVENT_BASE_FLAG_EPOLL_USE_CHANGELIST);
-    conf.require_features(EV_FEATURE_ET | EV_FEATURE_O1 | EV_FEATURE_EARLY_CLOSE);
+    conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1|EV_FEATURE_EARLY_CLOSE);
 #endif //
     return btpro::queue(conf);
 }

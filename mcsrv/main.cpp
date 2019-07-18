@@ -2,7 +2,44 @@
 #include "btpro/evcore.hpp"
 #include "btpro/socket.hpp"
 #include "btdef/date.hpp"
+
 #include <iostream>
+
+std::ostream& output(std::ostream& os)
+{
+    auto log_time = btdef::date::log_time_text();
+    os << log_time << ' ';
+    return os;
+}
+
+std::ostream& cerr()
+{
+    return output(std::cerr);
+}
+
+std::ostream& cout()
+{
+    return output(std::cout);
+}
+
+#define MKREFSTR(x, y) \
+    static const auto x = btref::mkstr(std::cref(y))
+
+btpro::queue create_queue()
+{
+    MKREFSTR(libevent_str, "libevent-");
+    cout() << libevent_str << btpro::queue::version() << ' ' << '-' << ' ';
+
+    btpro::config conf;
+    for (auto& i : conf.supported_methods())
+        std::cout << i << ' ';
+    std::endl(std::cout);
+
+#ifndef _WIN32
+    conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1|EV_FEATURE_EARLY_CLOSE);
+#endif //
+    return btpro::queue(conf);
+}
 
 int main(int argc, char* argv[])
 {
@@ -11,19 +48,12 @@ int main(int argc, char* argv[])
         // инициализация wsa
         btpro::startup();
 
-        btpro::config conf;
-#ifndef _WIN32
-        conf.set_flag(EVENT_BASE_FLAG_EPOLL_USE_CHANGELIST);
-        conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1|EV_FEATURE_EARLY_CLOSE);
-#endif //
-        btpro::queue queue(conf);
+        MKREFSTR(use_str, "use: ");
+        MKREFSTR(mccl_test_str, "mcsrv test");
 
-        std::cout << "libevent-" << btpro::queue::version() << ' ' << '-' << ' ';
-        for (auto& i : conf.supported_methods())
-            std::cout << i << ' ';
-        std::endl(std::cout);
-        std::cout << "use: " << queue.method() << std::endl << std::endl;
-        std::cout << "mcsrv test" << std::endl;
+        auto queue = create_queue();
+        cout() << use_str << queue.method() << std::endl << std::endl;
+        cout() << mccl_test_str << std::endl;
 
         // адрес и порт для рассылки
         btpro::ipv4::addr dest("224.0.0.42", 4587);
@@ -51,8 +81,10 @@ int main(int argc, char* argv[])
             {
                 // формируем пакет - дата
                 auto packet = utility::date(queue.gettimeofday_cached()).json_text();
-                std::cout << "sendto: " << dest
-                    << " '" << packet << '\'' << std::endl;
+
+                MKREFSTR(sendto_str, "sendto: ");
+                cout() << sendto_str << dest << ' '
+                    << '\'' << packet << '\'' << std::endl;
 
                 // отправляем пакет
                 btpro::socket sock(fd);

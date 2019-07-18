@@ -32,9 +32,25 @@ static std::ostream& cout()
 #define MKREFSTR(x, y) \
     static const auto x = btref::mkstr(std::cref(y))
 
+btpro::queue create_queue()
+{
+    MKREFSTR(libevent_str, "libevent-");
+    cout() << libevent_str << btpro::queue::version() << ' ' << '-' << ' ';
+
+    btpro::config conf;
+    for (auto& i : conf.supported_methods())
+        std::cout << i << ' ';
+    std::endl(std::cout);
+
+#ifndef _WIN32
+    conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1|EV_FEATURE_EARLY_CLOSE);
+#endif //
+    return btpro::queue(conf);
+}
+
 class server
 {
-    btpro::queue queue_{};
+    btpro::queue queue_{ create_queue() };
     btpro::tcp::acceptorfn<server> acceptor4_{ *this, &server::accept };
 
     void accept(be::socket sock, be::ip::addr addr)
