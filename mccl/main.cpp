@@ -43,7 +43,7 @@ btpro::queue create_queue()
     std::endl(std::cout);
 
 #ifndef _WIN32
-    conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1|EV_FEATURE_EARLY_CLOSE);
+    conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1);
 #endif //
     return btpro::queue(conf);
 }
