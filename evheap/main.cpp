@@ -13,38 +13,28 @@ void call(evutil_socket_t, short, void *)
 
 int main(int, char**)
 {
-    btpro::socket s;
-    s.create(btpro::ipv6::addr("[::1]:45678"), btpro::sock_stream,
-        btpro::reuse_addr::on(), btpro::reuse_port::on());
-    //s.listen(1024);
-
-    static constexpr auto d = double { 123.0 };
-    std::cout << d << std::endl;
-
-    static constexpr auto date =  utility::date { };
-    std::cout << date << std::endl;
+    btpro::startup();
 
     btpro::queue q;
+    
     btpro::evcore<btpro::evheap> evh;
-    btpro::evcore<btpro::evstack> evs;
-
     evh.create(q, EV_TIMEOUT, call, nullptr);
 
+    btpro::evcore<btpro::evstack> evs;
     auto l = [&](...){
-        std::cout << " lambda!" << std::endl;
+        std::cout << "+lambda!" << std::endl;
+
+        evh.destroy();
+        evs.destroy();
+
         q.loop_break();
     };
-    evs.create(q, SIGINT, EV_SIGNAL, l);
+    evs.create(q, EV_TIMEOUT, l);
 
     evh.add(std::chrono::milliseconds(250));
-    evs.add();
+    evs.add(std::chrono::milliseconds(550));
 
     q.dispatch();
-
-    evh.destroy();
-    evs.destroy();
-
-    s.close();
 
     return 0;
 }

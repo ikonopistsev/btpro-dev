@@ -66,8 +66,10 @@ public:
 #ifndef WIN32
         auto f = [&](auto...) {
             MKREFSTR(stop_str, "stop!");
-
             cerr() << stop_str << std::endl;
+
+            sint.remove();
+            sterm.remove();
 
             queue_.loop_break();
 
@@ -85,9 +87,6 @@ public:
 #endif // _WIN32
 
         queue_.dispatch();
-
-        sint.remove();
-        sterm.remove();
     }
 };
 

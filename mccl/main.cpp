@@ -12,11 +12,32 @@
 
 #include <iostream>
 
+static std::ostream& output(std::ostream& os)
+{
+    auto log_time = btdef::date::log_time_text();
+    os << log_time << ' ';
+    return os;
+}
+
+static std::ostream& cerr()
+{
+    return output(std::cerr);
+}
+
+static std::ostream& cout()
+{
+    return output(std::cout);
+}
+
+#define MKREFSTR(x, y) \
+    static const auto x = btref::mkstr(std::cref(y))
+
 btpro::queue create_queue()
 {
-    btpro::config conf;
+    MKREFSTR(libevent_str, "libevent-");
+    cout() << libevent_str << btpro::queue::version() << ' ' << '-' << ' ';
 
-    std::cout << "libevent-" << btpro::queue::version() << ' ' << '-' << ' ';
+    btpro::config conf;
     for (auto& i : conf.supported_methods())
         std::cout << i << ' ';
     std::endl(std::cout);
@@ -35,10 +56,12 @@ int main(int argc, char* argv[])
         // инициализация wsa
         btpro::startup();
 
-        auto queue = create_queue();
-        std::cout << "use: " << queue.method() << std::endl << std::endl;
+        MKREFSTR(use_str, "use: ");
+        MKREFSTR(mccl_test_str, "mccl test");
 
-        std::cout << "mccl test" << std::endl;
+        auto queue = create_queue();
+        cout() << use_str << queue.method() << std::endl << std::endl;
+        cout() << mccl_test_str << std::endl;
 
         // сокеты для мультикаста портируемо биндятся на any
         auto sa = btpro::ipv4::any(4587);
@@ -96,9 +119,9 @@ int main(int argc, char* argv[])
                 // если произошел таймаут чтения генерируем ошибку
                 if (ef & EV_TIMEOUT)
                 {
-                    static const auto recv_timeout = std::mkstr(std::cref("recv: timeout"));
-                    std::cout << time.json_text() << ' ' << recv_timeout << std::endl;
-                    throw std::runtime_error("recv timeout");
+                    MKREFSTR(recv_timeout_str, "recv timeout");
+                    cout() << recv_timeout_str << std::endl;
+                    throw std::runtime_error(recv_timeout_str.data());
                 }
 
                 if (ef & EV_READ)
@@ -122,13 +145,14 @@ int main(int argc, char* argv[])
                         }
                     }
 
-                    static const auto recv = std::mkstr(std::ref("recv:"));
-                    static const auto from = std::mkstr(std::ref("from:"));
-                    static const auto rx = std::mkstr(std::ref("rx:"));
-
                     count += static_cast<std::size_t>(res);
-                    std::cout << time.json_text() << ' ' << recv << ' ' << res
-                            << ' ' << from << ' ' << dest << ' ' << rx << ' ' << count << std::endl;
+
+                    MKREFSTR(rx_str, "rx:");
+                    MKREFSTR(recv_str, "recv:");
+                    MKREFSTR(from_str, "from:");
+
+                    cout() << recv_str << ' ' << res << ' ' << from_str << ' ' 
+                        << dest << ' ' << rx_str << ' ' << count << std::endl;
 
                     // возвращаем событие повторной читки
                     // без ожидания готовности сокета
