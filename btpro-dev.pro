@@ -4,6 +4,7 @@ CONFIG -= qt
 CONFIG -= app_bundle
 
 SUBDIRS += \
+    btdef \
     btpro \
     evheap \
     mcsrv \

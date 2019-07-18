@@ -13,10 +13,12 @@ CONFIG(release, debug|release) {
 INCLUDEPATH += \
     ../
 
-
 unix:!macx {
     CONFIG += link_pkgconfig
     PKGCONFIG += libevent
+    CONFIG(release, debug|release) {
+        QMAKE_POST_LINK=$(STRIP) $(TARGET)
+    }
 }
 
 macx {
