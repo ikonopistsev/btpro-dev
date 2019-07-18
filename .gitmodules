@@ -1,0 +1,6 @@
+[submodule "btdef"]
+	path = btdef
+	url = https://github.com/ikonopistsev/btdef.git
+[submodule "btpro"]
+	path = btpro
+	url = https://github.com/ikonopistsev/btpro.git
