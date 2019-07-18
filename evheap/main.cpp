@@ -6,9 +6,30 @@
 #include <iostream>
 #include <signal.h>
 
+std::ostream& output(std::ostream& os)
+{
+    auto log_time = btdef::date::log_time_text();
+    os << log_time << ' ';
+    return os;
+}
+
+inline std::ostream& cerr()
+{
+    return output(std::cerr);
+}
+
+inline std::ostream& cout()
+{
+    return output(std::cout);
+}
+
+#define MKREFSTR(x, y) \
+    static const auto x = btref::mkstr(std::cref(y))
+
 void call(evutil_socket_t, short, void *)
 {
-    std::cout << "method!" << std::endl;
+    MKREFSTR(method_str, "method!");
+    cout() << method_str << std::endl;
 }
 
 int main(int, char**)
@@ -22,7 +43,8 @@ int main(int, char**)
 
     btpro::evcore<btpro::evstack> evs;
     auto l = [&](...){
-        std::cout << "+lambda!" << std::endl;
+        MKREFSTR(lambda_str, "+lambda!");
+        cout() << lambda_str << std::endl;
 
         evh.destroy();
         evs.destroy();
@@ -33,6 +55,9 @@ int main(int, char**)
 
     evh.add(std::chrono::milliseconds(250));
     evs.add(std::chrono::milliseconds(550));
+
+    MKREFSTR(run_str, "run");
+    cout() << run_str << std::endl;
 
     q.dispatch();
 

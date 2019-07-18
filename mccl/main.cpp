@@ -19,12 +19,12 @@ std::ostream& output(std::ostream& os)
     return os;
 }
 
-std::ostream& cerr()
+inline std::ostream& cerr()
 {
     return output(std::cerr);
 }
 
-std::ostream& cout()
+inline std::ostream& cout()
 {
     return output(std::cout);
 }

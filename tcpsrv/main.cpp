@@ -12,19 +12,19 @@
 #include <signal.h>
 #endif // _WIN32
 
-static std::ostream& output(std::ostream& os)
+std::ostream& output(std::ostream& os)
 {
     auto log_time = btdef::date::log_time_text();
     os << log_time << ' ';
     return os;
 }
 
-static std::ostream& cerr()
+inline std::ostream& cerr()
 {
     return output(std::cerr);
 }
 
-static std::ostream& cout()
+inline std::ostream& cout()
 {
     return output(std::cout);
 }
