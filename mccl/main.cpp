@@ -12,6 +12,12 @@
 
 #include <iostream>
 
+#ifndef _WIN32
+#include <signal.h>
+#endif // _WIN32
+
+// - multicast client example
+
 std::ostream& output(std::ostream& os)
 {
     auto log_time = btdef::date::log_time_text();
@@ -47,6 +53,8 @@ btpro::queue create_queue()
 #endif //
     return btpro::queue(conf);
 }
+
+// - using mccl [[[PORT] HOST] MULTICAST_SRC_GROUP...]
 
 int main(int argc, char* argv[])
 {
@@ -109,7 +117,7 @@ int main(int argc, char* argv[])
         std::size_t count = 0;
         auto fn = [&] (evutil_socket_t fd, btpro::event_flag_t ef) {
             // получаем время для лога
-            utility::date time(queue.gettimeofday_cached());
+            btdef::date time(queue.gettimeofday_cached());
 
             try
             {
@@ -118,9 +126,8 @@ int main(int argc, char* argv[])
                 // если произошел таймаут чтения генерируем ошибку
                 if (ef & EV_TIMEOUT)
                 {
-                    MKREFSTR(recv_timeout_str, "recv timeout");
-                    cout() << recv_timeout_str << std::endl;
-                    throw std::runtime_error(recv_timeout_str.data());
+                    MKREFSTR(timeout_str, "timeout");
+                    cout() << timeout_str << std::endl;
                 }
 
                 if (ef & EV_READ)
@@ -131,17 +138,9 @@ int main(int argc, char* argv[])
                     auto res = sock.recvfrom(dest, buf, sizeof(buf));
                     if (btpro::code::fail == res)
                     {
-                        // UDP может быть заблочен только если нет данных
-                        // те если уже вычитали все
-                        // тогда просто выходим
-                        if (sock.wouldblock())
-                            return 0;
-                        else
-                        {
-                            // если произошла иная ошибка
-                            auto ec = btpro::net::error_code();
-                            throw std::system_error(ec, "recvfrom");
-                        }
+                        // если произошла иная ошибка
+                        auto ec = btpro::net::error_code();
+                        throw std::system_error(ec, "recvfrom");
                     }
 
                     count += static_cast<std::size_t>(res);
@@ -163,7 +162,7 @@ int main(int argc, char* argv[])
             }
             catch (const std::exception& e)
             {
-                std::cerr << e.what() << std::endl;
+                cerr() << e.what() << std::endl;
             }
 
             return 0;
@@ -174,9 +173,25 @@ int main(int argc, char* argv[])
         ev.create(queue, socket, EV_READ|EV_PERSIST|EV_TIMEOUT|EV_ET, fn);
 
         // стартуем ожидание события приема данных
-        ev.add(std::chrono::seconds(30));
-        // сразу активируем эвент чтобы сделать попытку чтения в первый раз
-        ev.active(EV_READ);
+        ev.add(std::chrono::seconds(20));
+
+#ifndef WIN32
+        be::evcore<be::evstack> sint;
+        be::evcore<be::evstack> sterm;
+
+        auto f = [&](auto...) {
+            MKREFSTR(stop_str, "stop!");
+            cerr() << stop_str << std::endl;
+            queue.loop_break();
+            return 0;
+        };
+
+        sint.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
+        sint.add();
+
+        sterm.create(queue, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
+        sterm.add();
+#endif // _WIN32
 
         queue.dispatch();
 

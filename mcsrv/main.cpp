@@ -5,6 +5,10 @@
 
 #include <iostream>
 
+#ifndef _WIN32
+#include <signal.h>
+#endif // _WIN32
+
 std::ostream& output(std::ostream& os)
 {
     auto log_time = btdef::date::log_time_text();
@@ -41,6 +45,9 @@ btpro::queue create_queue()
     return btpro::queue(conf);
 }
 
+// - using  mcsrv dst_host:dst_port
+// - or     mcsrv dst_host dst_port
+
 int main(int argc, char* argv[])
 {
     try
@@ -75,12 +82,13 @@ int main(int argc, char* argv[])
 
         btpro::evcore<btpro::evstack> ev;
 
-        auto fn = [&](evutil_socket_t fd, btpro::event_flag_t) mutable {
+        auto fn = [&](evutil_socket_t fd, btpro::event_flag_t) {
             // подключаем сокет
             try
             {
                 // формируем пакет - дата
-                auto packet = utility::date(queue.gettimeofday_cached()).json_text();
+                btdef::date time(queue.gettimeofday_cached());
+                auto packet = time.json_text();
 
                 MKREFSTR(sendto_str, "sendto: ");
                 cout() << sendto_str << dest << ' '
@@ -109,8 +117,27 @@ int main(int argc, char* argv[])
         // сразу же делаем рассылку
         ev.active(EV_TIMEOUT);
 
+#ifndef WIN32
+        be::evcore<be::evstack> sint;
+        be::evcore<be::evstack> sterm;
+
+        auto f = [&](auto...) {
+            MKREFSTR(stop_str, "stop!");
+            cerr() << stop_str << std::endl;
+            queue.loop_break();
+            return 0;
+        };
+
+        sint.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
+        sint.add();
+
+        sterm.create(queue, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
+        sterm.add();
+#endif // _WIN32
+
         queue.dispatch();
 
+        // закроем сокет перед выходом
         socket.close();
     }
     catch (const std::exception& e)

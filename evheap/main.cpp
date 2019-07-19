@@ -45,10 +45,6 @@ int main(int, char**)
     auto l = [&](...){
         MKREFSTR(lambda_str, "+lambda!");
         cout() << lambda_str << std::endl;
-
-        evh.destroy();
-        evs.destroy();
-
         q.loop_break();
     };
     evs.create(q, EV_TIMEOUT, l);
