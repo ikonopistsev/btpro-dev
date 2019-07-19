@@ -49,8 +49,16 @@ int main(int, char**)
     };
     evs.create(q, EV_TIMEOUT, l);
 
-    evh.add(std::chrono::milliseconds(250));
-    evs.add(std::chrono::milliseconds(550));
+    evh.add(std::chrono::milliseconds(300));
+    evs.add(std::chrono::milliseconds(700));
+
+    // one shot
+    auto oneshot = [&](...){
+        MKREFSTR(oneshot_str, "oneshot");
+        cout() << oneshot_str << std::endl;
+    };
+    q.once(EV_TIMEOUT, std::chrono::milliseconds(100), oneshot);
+
 
     MKREFSTR(run_str, "run");
     cout() << run_str << std::endl;
