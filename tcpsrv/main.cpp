@@ -4,9 +4,11 @@
 #include "btpro/evheap.hpp"
 #include "btpro/evcore.hpp"
 #include "btpro/tcp/acceptorfn.hpp"
+#include "btpro/tcp/bev.hpp"
 #include "btdef/date.hpp"
 
 #include <iostream>
+#include <list>
 
 #ifndef _WIN32
 #include <signal.h>
@@ -52,19 +54,35 @@ class server
 {
     btpro::queue queue_{ create_queue() };
     btpro::tcp::acceptorfn<server> acceptor4_{ *this, &server::accept };
+    std::list<btpro::tcp::bev> peer_{};
 
     void accept(be::socket sock, be::ip::addr addr)
     {
         MKREFSTR(family_str, "family:");
         MKREFSTR(connect_str, "connect from:");
 
-        cout() << connect_str << ' ' << be::sock_addr(addr) << ' '
+        be::sock_addr sa(addr);
+
+        cout() << connect_str << ' ' << sa << ' '
                << family_str << ' ' << addr.family() << std::endl;
 
+        auto peer = peer_.emplace(peer_.end(),
+            queue_, sock, BEV_OPT_CLOSE_ON_FREE);
+
+        // готовим буфер для отправки
         MKREFSTR(bye_str, "bye!");
 
-        sock.send(bye_str.data(), bye_str.size());
-        sock.close();
+        // отправляем статический буфер
+        // указатель на пир и адрес подклчения копируем
+        peer->write_ref(bye_str.data(), bye_str.size(), [&, peer, sa]{
+
+            MKREFSTR(close_str, "close:");
+            cout() << close_str << ' ' << sa << std::endl;
+
+            // удаляем пир
+            // это приведет к закрытию сокета (BEV_OPT_CLOSE_ON_FREE)
+            peer_.erase(peer);
+        });
     }
 
 public:
