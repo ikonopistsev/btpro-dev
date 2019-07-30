@@ -1,6 +1,7 @@
 #include "btpro/evheap.hpp"
 #include "btpro/evstack.hpp"
 #include "btpro/evcore.hpp"
+#include "btpro/ev.hpp"
 #include "btdef/date.hpp"
 
 #include <iostream>
@@ -50,7 +51,7 @@ int main(int, char**)
     evs.create(q, EV_TIMEOUT, l);
 
     evh.add(std::chrono::milliseconds(300));
-    evs.add(std::chrono::milliseconds(700));
+    evs.add(std::chrono::milliseconds(500));
 
     // one shot
     auto oneshot = [&](...){

@@ -74,7 +74,7 @@ class server
 
         // отправляем статический буфер
         // указатель на пир и адрес подклчения копируем
-        peer->write_ref(bye_str.data(), bye_str.size(), [&, peer, sa]{
+        peer->write_ref(bye_str.data(), bye_str.size(), [&, peer, sa] {
 
             MKREFSTR(close_str, "close:");
             cout() << close_str << ' ' << sa << std::endl;
