@@ -88,7 +88,7 @@ int main(int, char**)
     };
     q.once(std::chrono::milliseconds(100), std::ref(rshot));
 
-    q.once(EV_PERSIST, std::chrono::milliseconds(110), [&](...){
+    q.once(std::chrono::milliseconds(110), [&](...) {
         MKREFSTR(lambdashot_str, "lambda");
         cout() << lambdashot_str << std::endl;
     });
