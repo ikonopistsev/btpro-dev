@@ -1,134 +1,125 @@
-#include "btpro/config.hpp"
-#include "btpro/socket.hpp"
-
-#include <vector>
-#include <array>
-#include <list>
+#include "btpro/evcore.hpp"
+#include "btpro/evstack.hpp"
+#include "btpro/ssl/connector.hpp"
+#include "btpro/uri.hpp"
+#include "btdef/date.hpp"
 
 #include <iostream>
+#include <list>
+#include <string_view>
 
-int main(int argc, char* argv[])
+#ifndef _WIN32
+#include <signal.h>
+#endif // _WIN32
+
+std::ostream& output(std::ostream& os)
 {
-//    try
-//    {
-//        // инициализация wsa
-//        btpro::startup();
+    auto log_time = btdef::date::log_time_text();
+    os << log_time << ' ';
+    return os;
+}
 
-//        btpro::config c;
-//#ifndef _WIN32
-//        c.require_features(EV_FEATURE_ET);
-//#endif //
-//        btpro::queue q(c);
-//        std::cout << btpro::queue::version() << ' ' << q.method() << std::endl;
+inline std::ostream& cerr()
+{
+    return output(std::cerr);
+}
 
-//        // сокеты для мультикаста портируемо биндятся на any
-//        auto sa = btpro::ipv4::any(4587);
-//        if (argc > 1)
-//        {
-//            // читаем порт из параметров
-//            sa = btpro::ipv4::any(std::atoi(argv[1]));
-//        }
+inline std::ostream& cout()
+{
+    return output(std::cout);
+}
 
-//        btpro::socket socket;
-//        btpro::socket bevsock;
-//        // создаем сокет с возможностью повторного использования адреса
-//        socket.create(sa, btpro::sock_dgram, btpro::reuse_addr::on());
-//        bevsock.create(sa, btpro::sock_dgram, btpro::reuse_addr::on());
+template <class F>
+inline std::ostream& cout(F fn)
+{
+    auto text = fn();
+    return std::endl(output(std::cout)
+        .write(text.data(), static_cast<std::streamsize>(text.size())));
+}
 
-//        if (argc > 2)
-//        {
-//            using btpro::ipv4::addr;
-//            using btpro::ipv4::multicast_group::join;
+template <class F>
+inline std::ostream& cerr(F fn)
+{
+    auto text = fn();
+    return std::endl(output(std::cerr)
+        .write(text.data(), static_cast<std::streamsize>(text.size())));
+}
 
-//            // парсим адрес группы из параметров
-//            addr group_addr(argv[2]);
-//            // вступаем в указанную группу с фильтрами источников
-//            if (argc > 3)
-//            {
-//                // формируем фильтры источников рассылки
-//                for (int i = 3; i < argc; ++i)
-//                {
-//                    addr src_addr(argv[i]);
-//                    socket.set(join(group_addr, src_addr));
-//                    bevsock.set(join(group_addr, src_addr));
-//                }
-//            }
-//            else
-//            {
-//                // вступаем в группу рассылки переданую в параметрах
-//                socket.set(join(group_addr));
-//                bevsock.set(join(group_addr));
-//            }
-//        }
-//        else
-//        {
-//            using btpro::ipv4::addr;
-//            using btpro::ipv4::multicast_group::join;
+#define MKREFSTR(x, y) \
+    static const auto x = btref::mkstr(std::cref(y))
 
-//            // по умолчанию
-//            // вступаем в группу без фильтрации
-//            socket.set(join(addr("224.0.0.42")));
-//            bevsock.set(join(addr("224.0.0.42")));
-//        }
+btpro::queue create_queue()
+{
+    MKREFSTR(libevent_str, "libevent-");
+    cout() << libevent_str << btpro::queue::version() << ' ' << '-' << ' ';
 
-//        struct reader
-//        {
-//            utility::date time_{};
+    btpro::config conf;
+    for (auto& i : conf.supported_methods())
+        std::cout << i << ' ';
+    std::endl(std::cout);
 
-//            reader(timeval tv)
-//                : time_(tv)
-//            {   }
+#ifndef _WIN32
+    conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1);
+#endif //
+    return btpro::queue(conf);
+}
 
-//            void push(const btpro::sock_addr& dest,
-//                const char *buf, std::size_t len)
-//            {
-//                std::cout << time_.json_text()
-//                    << " recv: '" << ref::string(buf, len)
-//                    << "' from: " << dest << std::endl;
-//            }
-//        };
+int main()
+{
+    try
+    {
+        // инициализация wsa
+        btpro::startup();
+        auto queue = create_queue();
+        btpro::dns dns(queue, btpro::dns_initialize_nameservers);
+        auto ssl = btpro::ssl::client();
 
-//        // создаем собыите приема данных
-//        btpro::evfun ev;
-//        btpro::udp::basic_recvfrom<1024, 16> recv_from;
-//        ev.assign(q, socket.fd(), EV_READ|EV_PERSIST|EV_TIMEOUT|EV_ET,
-//            [&](ev_socklen_t fd, short ef) {
-//                // получаем время для лога
-//                utility::date time(q.gettimeofday_cached());
-//                // если произошел таймаут чтения генерируем ошибку
-//                if (ef & EV_TIMEOUT)
-//                {
-//                    std::cout << time.json_text() << " recv: timeout" << std::endl;
-//                    throw std::runtime_error("recv timeout");
-//                }
+        btpro::ssl::connector<BUFFEREVENT_SSL_CONNECTING,
+                BEV_OPT_CLOSE_ON_FREE> conn(ssl, queue, dns);
 
-//                reader r(q.gettimeofday_cached());
-//                auto count = recv_from(fd, r);
-//                if (count)
-//                {
-//                    // активируем событие повторно
-//                    // это приведет к повторному чтению сокета на следующем цикле очереди
-//                    // без выполнения epoll_wait, poll, select и т.п.
-//                    // указываем фалг, что это не был таймаут
-//                    ev.next(EV_READ|EV_ACTIVATE);
-//                }
-//        });
+        auto bev = conn.create();
+        btpro::sock_addr addr = btpro::sock_addr("localhost:22");
+        bev.connect(addr);
 
-//        // стартуем ожидание события приема данных
-//        ev.add(std::chrono::seconds(30));
-//        // сразу активируем эвент чтобы сделать попытку чтения в первый раз
-//        ev.active(EV_READ|EV_ACTIVATE);
+        btpro::uri<btpro::detail::data_ptr<btpro::detail::uri_data<std::string>>> uri;
+        uri.set_scheme("http");
+        uri.set_host(std::string("localhost"));
 
-//        //btpro::udp::pev udpbev(q, bevsock.fd());
+        btpro::uri<btpro::detail::uri_data<std::string>> text_uri, text_uri1;
+        text_uri.set_host("localhost");
 
-//        q.dispatch();
+        cout() << "sizeof ptr_uri: " << sizeof(uri) << std::endl;
+        cout() << "sizeof text_uri: " << sizeof(text_uri) << std::endl;
 
-//        socket.close();
-//    }
-//    catch (const std::exception& e)
-//    {
-//        std::cerr << e.what() << std::endl;
-//    }
+        text_uri = uri;
+        text_uri1 = text_uri;
+
+        text_uri1.set_user(btref::mkstr(std::cref("user")));
+
+
+#ifndef WIN32
+        auto f = [&](auto...) {
+            MKREFSTR(stop_str, "stop!");
+            cerr() << stop_str << std::endl;
+            queue.loop_break();
+            return 0;
+        };
+
+        be::evcore<be::evstack> sint;
+        sint.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
+        sint.add();
+
+        be::evcore<be::evstack> sterm;
+        sterm.create(queue, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
+        sterm.add();
+#endif // _WIN32
+
+        queue.dispatch();
+    }
+    catch (const std::exception& e)
+    {
+        cerr() << e.what() << std::endl;
+    }
 
     return 0;
 }

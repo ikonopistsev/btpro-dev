@@ -9,7 +9,8 @@ SUBDIRS += \
     evheap \
     mcsrv \
     mccl \
-    tcpsrv
+    tcpsrv \
+    tcpcl
 
 btdef.subdir = btdef
 btpro.subdir = btpro
@@ -17,3 +18,4 @@ evheap.subdir = evheap
 mcsrv.subdir = mcsrv
 mccl.subdir = mccl
 tcpsrv.subdir = tcpsrv
+tcpcl.subdir = tcpcl

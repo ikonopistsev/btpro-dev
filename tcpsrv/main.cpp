@@ -6,6 +6,7 @@
 #include "btpro/tcp/acceptorfn.hpp"
 #include "btpro/tcp/bev.hpp"
 #include "btdef/date.hpp"
+#include "btpro/tcp/bev.hpp"
 
 #include <iostream>
 #include <list>
@@ -34,6 +35,52 @@ inline std::ostream& cout()
 #define MKREFSTR(x, y) \
     static const auto x = btref::mkstr(std::cref(y))
 
+
+//void rcb(bufferevent *, void *arg)
+//{
+//    auto c = static_cast<btpro::tcp::bev*>(arg);
+//    cout() << "rcb:" << c->input_length() << std::endl;
+//    btpro::buffer b(c->input());
+//    cout() << "rcb:" << b.str() << std::endl;
+//}
+
+//void wcb(bufferevent *, void *arg)
+//{
+//    auto c = static_cast<btpro::tcp::bev*>(arg);
+//    cout() << "wcb: " << c->output_length() << std::endl;
+//}
+
+//void evcb(bufferevent *, short what, void *arg)
+//{
+//    cout() << "evcb: " << what << std::endl;
+
+//    if (what & BEV_EVENT_EOF)
+//        cout() << "evcb: eof" << std::endl;
+//    if (what & BEV_EVENT_ERROR)
+//        cout() << "evcb: error" << std::endl;
+//    if (what & BEV_EVENT_TIMEOUT)
+//        cout() << "evcb: timeout" << std::endl;
+//    if (what & BEV_EVENT_CONNECTED)
+//    {
+//        cout() << "evcb: connected" << std::endl;
+
+//        MKREFSTR(get_req, "GET / HTTP/1.0\n");
+//        MKREFSTR(host_req, "Host: seafile.dev4.fun\n\n");
+
+//        auto c = static_cast<btpro::tcp::bev*>(arg);
+//        c->write(get_req.data(), get_req.size(), [&]{
+//            cout() << "get sended" << std::endl;
+//        });
+//        c->write(host_req.data(), host_req.size(), [&]{
+//            cout() << "host sended" << std::endl;
+//        });
+//    }
+//    if (what & BEV_EVENT_READING)
+//        cout() << "evcb: error encountered while reading" << std::endl;
+//    if (what & BEV_EVENT_WRITING)
+//        cout() << "evcb: error encountered while writing" << std::endl;
+//}
+
 btpro::queue create_queue()
 {
     MKREFSTR(libevent_str, "libevent-");
@@ -53,8 +100,8 @@ btpro::queue create_queue()
 class server
 {
     btpro::queue queue_{ create_queue() };
+    btpro::dns dns_{ queue_, btpro::dns_initialize_nameservers };
     btpro::tcp::acceptorfn<server> acceptor4_{ *this, &server::accept };
-    std::list<btpro::tcp::bev> peer_{};
 
     void accept(be::socket sock, be::ip::addr addr)
     {
@@ -66,23 +113,7 @@ class server
         cout() << connect_str << ' ' << sa << ' '
                << family_str << ' ' << addr.family() << std::endl;
 
-        auto peer = peer_.emplace(peer_.end(),
-            queue_, sock, BEV_OPT_CLOSE_ON_FREE);
-
-        // готовим буфер для отправки
-        MKREFSTR(bye_str, "bye!");
-
-        // отправляем статический буфер
-        // указатель на пир и адрес подклчения копируем
-        peer->write_ref(bye_str.data(), bye_str.size(), [&, peer, sa] {
-
-            MKREFSTR(close_str, "close:");
-            cout() << close_str << ' ' << sa << std::endl;
-
-            // удаляем пир
-            // это приведет к закрытию сокета (BEV_OPT_CLOSE_ON_FREE)
-            peer_.erase(peer);
-        });
+        sock.close();
     }
 
 public:
