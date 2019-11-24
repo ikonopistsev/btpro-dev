@@ -1,3 +1,7 @@
+//#define _CRTDBG_MAP_ALLOC
+//#include <stdlib.h>
+//#include <crtdbg.h>
+
 #include "btpro/evheap.hpp"
 #include "btpro/evstack.hpp"
 #include "btpro/evcore.hpp"
@@ -33,17 +37,15 @@ void call(evutil_socket_t, short, void *)
     cout() << method_str << std::endl;
 }
 
-int main(int, char**)
+int run()
 {
-    btpro::startup();
-
     btpro::queue q;
 
     btpro::evcore<btpro::evheap> evh;
     evh.create(q, EV_TIMEOUT, call, nullptr);
 
     btpro::evcore<btpro::evstack> evs;
-    auto l = [&](...){
+    auto l = [&](...) {
         MKREFSTR(lambda_str, "+lambda!");
         cout() << lambda_str << std::endl;
         q.loop_break();
@@ -54,7 +56,7 @@ int main(int, char**)
     evs.add(std::chrono::milliseconds(500));
 
     // one shot
-    auto lambda = [&](...){
+    auto lambda = [&](...) {
         MKREFSTR(lambda_str, "lambda");
         cout() << lambda_str << std::endl;
     };
@@ -63,12 +65,23 @@ int main(int, char**)
     q.once(std::chrono::milliseconds(110), [&](...) {
         MKREFSTR(fn_str, "fn");
         cout() << fn_str << std::endl;
-    });
+        });
 
     MKREFSTR(run_str, "run");
     cout() << run_str << std::endl;
 
     q.dispatch();
+
+    return 0;
+}
+
+int main(int, char**)
+{
+    btpro::startup();
+
+    run();
+
+    //_CrtDumpMemoryLeaks();
 
     return 0;
 }
