@@ -151,21 +151,12 @@ int main(int argc, char* argv[])
 
                     cout() << recv_str << ' ' << res << ' ' << from_str << ' ' 
                         << dest << ' ' << rx_str << ' ' << count << std::endl;
-
-                    // возвращаем событие повторной читки
-                    // без ожидания готовности сокета
-                    // а в ней сделаем проверку на wouldblock
-                    return 0;
                 }
-
-                return 0;
             }
             catch (const std::exception& e)
             {
                 cerr() << e.what() << std::endl;
             }
-
-            return 0;
         };
 
         // создаем собыите приема данных
@@ -183,7 +174,6 @@ int main(int argc, char* argv[])
             MKREFSTR(stop_str, "stop!");
             cerr() << stop_str << std::endl;
             queue.loop_break();
-            return 0;
         };
 
         sint.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);

@@ -99,14 +99,11 @@ int main(int argc, char* argv[])
                 auto res = sock.sendto(dest, packet.data(), packet.size());
                 if (btpro::code::fail == res)
                     throw std::system_error(btpro::net::error_code(), "sendto");
-
-                return 0;
             }
             catch (const std::exception& e)
             {
                 std::cerr << e.what() << std::endl;
             }
-            return 0;
         };
 
         // создаем таймер рассылки
@@ -125,7 +122,6 @@ int main(int argc, char* argv[])
             MKREFSTR(stop_str, "stop!");
             cerr() << stop_str << std::endl;
             queue.loop_break();
-            return 0;
         };
 
         sint.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
