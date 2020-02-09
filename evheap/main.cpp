@@ -2,8 +2,7 @@
 //#include <stdlib.h>
 //#include <crtdbg.h>
 
-#include "btpro/evheap.hpp"
-#include "btpro/evstack.hpp"
+#include "btpro/queue.hpp"
 #include "btpro/evcore.hpp"
 #include "btdef/date.hpp"
 
@@ -39,12 +38,13 @@ void call(evutil_socket_t, short, void *)
 
 int run()
 {
-    btpro::queue q;
+    btpro::queue queue;
+    btpro::queue_ref q(queue.create());
 
-    btpro::evcore<btpro::evheap> evh;
+    btpro::evh evh;
     evh.create(q, EV_TIMEOUT, call, nullptr);
 
-    btpro::evcore<btpro::evstack> evs;
+    btpro::evs evs;
     auto l = [&](...) {
         MKREFSTR(lambda_str, "+lambda!");
         cout() << lambda_str << std::endl;

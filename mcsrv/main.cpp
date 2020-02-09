@@ -1,4 +1,4 @@
-#include "btpro/evstack.hpp"
+#include "btpro/queue.hpp"
 #include "btpro/evcore.hpp"
 #include "btpro/socket.hpp"
 #include "btdef/date.hpp"
@@ -42,7 +42,9 @@ btpro::queue create_queue()
 #ifndef _WIN32
     conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1);
 #endif //
-    return btpro::queue(conf);
+    btpro::queue queue;
+    queue.create(conf);
+    return queue;
 }
 
 // - using  mcsrv dst_host:dst_port
