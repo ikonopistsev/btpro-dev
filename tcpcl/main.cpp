@@ -61,7 +61,9 @@ btpro::queue create_queue()
 #ifndef _WIN32
     conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1);
 #endif //
-    return btpro::queue(conf);
+    btpro::queue queue;
+    queue.create(conf);
+    return queue;
 }
 
 int main()
@@ -71,7 +73,8 @@ int main()
         // инициализация wsa
         btpro::startup();
         auto queue = create_queue();
-        btpro::dns dns(queue, btpro::dns_initialize_nameservers);
+        btpro::dns dns;
+        dns.create(queue, btpro::dns_initialize_nameservers);
         auto ssl = btpro::ssl::client();
 
         btpro::ssl::connector<BUFFEREVENT_SSL_CONNECTING,

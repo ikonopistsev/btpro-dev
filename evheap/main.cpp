@@ -39,7 +39,8 @@ void call(evutil_socket_t, short, void *)
 int run()
 {
     btpro::queue queue;
-    btpro::queue_ref q(queue.create());
+    queue.create();
+    btpro::queue_ref q(queue);
 
     btpro::evh evh;
     evh.create(q, EV_TIMEOUT, call, nullptr);
