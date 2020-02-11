@@ -58,6 +58,7 @@ class server
        
         btpro::buffer out;
         out.append(btdef::date(queue_).to_log_time());
+        out.append_ref(std::cref("\n"));
         out.write(sock);
 
         sock.close();
@@ -74,7 +75,7 @@ class server
         std::endl(std::cout);
 
 #ifndef _WIN32
-        conf.require_features(EV_FEATURE_ET | EV_FEATURE_O1);
+        conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1);
 #endif //
         queue_.create(conf);
         dns_.create(queue_, btpro::dns_initialize_nameservers);
