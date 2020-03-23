@@ -1,6 +1,6 @@
 #include "btpro/evcore.hpp"
 #include "btpro/evstack.hpp"
-#include "btpro/ssl/connector.hpp"
+#include "btpro/ssl/bevsock.hpp"
 #include "btpro/uri.hpp"
 #include "btdef/date.hpp"
 
