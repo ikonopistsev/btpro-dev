@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
         // создаем сокет на произвольном порту
         socket.create(dest.family(), btpro::sock_dgram);
 
-        btpro::evcore<btpro::evstack> ev;
+        btpro::evs ev;
 
         auto fn = [&](evutil_socket_t fd, btpro::event_flag_t) {
             // подключаем сокет
@@ -117,8 +117,8 @@ int main(int argc, char* argv[])
         ev.active(EV_TIMEOUT);
 
 #ifndef WIN32
-        be::evcore<be::evstack> sint;
-        be::evcore<be::evstack> sterm;
+        be::evs sint;
+        be::evs sterm;
 
         auto f = [&](auto...) {
             MKREFSTR(stop_str, "stop!");
