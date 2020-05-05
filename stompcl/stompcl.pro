@@ -11,7 +11,11 @@ CONFIG(release, debug|release) {
 }
 
 INCLUDEPATH += \
+    ../stomptalk/include \
     ../
+
+LIBS += \
+    -L../stomptalk -lstomptalk
 
 unix:!macx {
     CONFIG += link_pkgconfig

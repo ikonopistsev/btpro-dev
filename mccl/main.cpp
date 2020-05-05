@@ -5,6 +5,7 @@
 #include "btpro/ipv4/multicast_source_group.hpp"
 #include "btdef/date.hpp"
 #include "btdef/string.hpp"
+#include <string_view>
 
 #include <vector>
 #include <array>
@@ -35,8 +36,14 @@ inline std::ostream& cout()
     return output(std::cout);
 }
 
+template<class T, std::size_t N>
+constexpr auto mksv(T const (&str)[N])
+{
+    return std::basic_string_view<T>(str);
+}
+
 #define MKREFSTR(x, y) \
-    static const auto x = btref::mkstr(std::cref(y))
+    constexpr auto x = mksv(y)
 
 btpro::queue create_queue()
 {
@@ -65,12 +72,11 @@ int main(int argc, char* argv[])
         // инициализация wsa
         btpro::startup();
 
-        MKREFSTR(use_str, "use: ");
-        MKREFSTR(mccl_test_str, "mccl test");
-
+        auto use = btdef::make_text("use: ");
+        auto app_name = mksv("mccl test");
         auto queue = create_queue();
-        cout() << use_str << queue.method() << std::endl << std::endl;
-        cout() << mccl_test_str << std::endl;
+        cout() << use << queue.method() << std::endl << std::endl;
+        cout() << app_name << std::endl;
 
         // сокеты для мультикаста портируемо биндятся на any
         auto sa = btpro::ipv4::any(4587);

@@ -4,3 +4,6 @@
 [submodule "btpro"]
 	path = btpro
 	url = https://github.com/ikonopistsev/btpro.git
+[submodule "stomptalk"]
+	path = stomptalk
+	url = https://github.com/ikonopistsev/stomptalk.git

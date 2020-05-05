@@ -10,7 +10,9 @@ SUBDIRS += \
     mcsrv \
     mccl \
     tcpsrv \
-    tcpcl
+    tcpcl \
+    stompcl \
+    stomptalk
 
 btdef.subdir = btdef
 btpro.subdir = btpro
@@ -19,3 +21,7 @@ mcsrv.subdir = mcsrv
 mccl.subdir = mccl
 tcpsrv.subdir = tcpsrv
 tcpcl.subdir = tcpcl
+stompcl.subdir = stompcl
+stomptalk.subdir = stomptalk
+
+stompcl.depends = btpro btdef stomptalk

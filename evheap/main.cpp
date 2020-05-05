@@ -38,6 +38,11 @@ void call(evutil_socket_t, short, void *)
 
 int run()
 {
+    auto t = btdef::date::now().json_text();
+    std::cout << t << std::endl;
+    btdef::date d(t);
+    std::cout << d.json_text() << std::endl;
+
     btpro::queue queue;
     queue.create();
     btpro::queue_ref q(queue);
@@ -55,6 +60,9 @@ int run()
 
     evh.add(std::chrono::milliseconds(300));
     evs.add(std::chrono::milliseconds(500));
+
+
+    //ev.set(ev::call(q1, EV_TIMEOUT, l), ev::call(q2, l2));
 
     // one shot
     auto lambda = [&](...) {
