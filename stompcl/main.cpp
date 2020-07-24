@@ -104,9 +104,8 @@ public:
         conn_.connect(dns_, host, port);
     }
 
-    void on_event(short ev)
+    void on_event(short)
     {
-        cout() << "ev: " << ev << std::endl;
         // любое событие приводик к закрытию сокета
         queue_.once(std::chrono::seconds(5), [&](...){
             connect("::1", 61613);
@@ -115,29 +114,17 @@ public:
 
     void on_connect()
     {
-        cout() << "connected" << std::endl;
-
-        stomptalk::v12::connect msg("one", "bob", "bobone");
-        msg.push(stomptalk::v12::heart_beat(0, 0));
-        msg.push(stomptalk::header::receipt("123456"));
-        conn_.logon(std::move(msg));
+        stomptalk::v12::connect connect("one", "bob", "bobone");
+        connect.push(stomptalk::header::destination("123"));
+        conn_.logon(std::move(connect));
     }
 
-    void on_message(stomptalk::v12::incoming::frame frame)
+    void on_logon()
     {
-
-        cout() << frame.method() << std::endl;
-    }
-
-    void on_logon(stomptalk::v12::incoming::frame frame)
-    {
-         cout() << "logon: " << frame.method() << std::endl;
-
-         stomptalk::asked ask;
-         stomptalk::v12::subscribe subscr("/queue/stompcl", ask.id());
-         subscr.push(stomptalk::header::receipt("123456"));
-         //subscr.push(stomptalk::header::ask_client());
-         conn_.subscribe(std::move(subscr), &peer::on_message);
+        conn_.subscribe(stomptalk::v12::subscribe("/queue/stompcl"),
+            [](btpro::buffer buf) {
+                std::cout << std::endl << "RECEIVE: " << buf.str() << std::endl;
+            });
     }
 };
 
@@ -153,8 +140,8 @@ int main()
 
         peer p(queue, dns);
 
-        stomptalk::asked ask;
-        cout() << ask.id() << std::endl;
+        //stomptalk::asked ask;
+        //cout() << ask.id() << std::endl;
 #ifndef WIN32
         auto f = [&](auto...) {
             MKREFSTR(stop_str, "stop!");
