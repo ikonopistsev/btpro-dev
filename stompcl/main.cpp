@@ -124,8 +124,7 @@ public:
         conn_.subscribe(stomptalk::v12::subscribe("/queue/stompcl"),
             [](btpro::buffer buf) {
                 std::cout << std::endl << "RECEIVE: " << buf.str() << std::endl;
-            });
-    }
+            });    }
 };
 
 int main()
