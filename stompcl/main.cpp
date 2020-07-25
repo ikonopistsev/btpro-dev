@@ -27,6 +27,11 @@ std::ostream& output(std::ostream& os)
     return os;
 }
 
+inline std::ostream& endl2(std::ostream& os)
+{
+    return os << std::endl << std::endl;
+}
+
 inline std::ostream& cerr()
 {
     return output(std::cerr);
@@ -108,23 +113,39 @@ public:
     {
         // любое событие приводик к закрытию сокета
         queue_.once(std::chrono::seconds(5), [&](...){
-            connect("::1", 61613);
+            connect("192.168.10.77", 61613);
         });
     }
 
     void on_connect()
     {
-        stomptalk::v12::connect connect("one", "bob", "bobone");
-        connect.push(stomptalk::header::destination("123"));
-        conn_.logon(std::move(connect));
+        conn_.logon(stomptalk::v12::connect("one", "bob", "bobone"));
     }
 
     void on_logon()
     {
-        conn_.subscribe(stomptalk::v12::subscribe("/queue/stompcl"),
-            [](btpro::buffer buf) {
-                std::cout << std::endl << "RECEIVE: " << buf.str() << std::endl;
-            });    }
+        stomptalk::tcp::subscribe subs("/queue/stompcl",
+            [&](btpro::buffer buf) {
+                cout() << "RECEIVE: " << buf.str() << endl2;
+
+                stomptalk::tcp::send send("/queue/stompcl");
+                auto time_text = btdef::date::to_log_time();
+                send.payload(btpro::buffer(time_text));
+                conn_.send(std::move(send), [=]{
+                    cout() << "SENDED: " << time_text << endl2;
+                });
+        });
+
+        conn_.subscribe(std::move(subs), [&]{
+            stomptalk::tcp::send send("/queue/stompcl");
+            auto time_text = btdef::date::to_log_time();
+            send.payload(btpro::buffer(time_text));
+            conn_.send(std::move(send), [=]{
+                cout() << "SENDED: " << time_text << endl2;
+            });
+        });
+
+    }
 };
 
 int main()
@@ -158,7 +179,7 @@ int main()
         sterm.add();
 #endif // _WIN32
 
-        p.connect("::1", 61613);
+        p.connect("192.168.10.77", 61613);
 
         queue.dispatch();
     }
