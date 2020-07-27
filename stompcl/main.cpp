@@ -127,7 +127,7 @@ public:
         stomptalk::tcp::subscribe subs("/queue/stompcl",
             [&](btpro::buffer buf) {
                 cout() << "RECEIVE: " << buf.str() << endl2;
-
+                return;
                 stomptalk::tcp::send send("/queue/stompcl");
                 auto time_text = btdef::date::to_log_time();
                 send.payload(btpro::buffer(time_text));
