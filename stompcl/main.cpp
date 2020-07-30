@@ -15,6 +15,7 @@
 #include <iostream>
 #include <list>
 #include <string_view>
+#include <functional>
 
 #ifndef _WIN32
 #include <signal.h>
@@ -81,14 +82,15 @@ btpro::queue create_queue()
 
 class peer
 {
-    typedef stomptalk::tcp::connection<peer>
-        connection_type;
+    typedef stomptalk::tcp::connection connection_type;
 
     btpro::queue_ref queue_;
     btpro::dns_ref dns_;
 
-    connection_type conn_{ queue_, *this,
-        &peer::on_event, &peer::on_connect, &peer::on_logon };
+    connection_type conn_{ queue_,
+        std::bind(&peer::on_event, this, std::placeholders::_1),
+        std::bind(&peer::on_connect, this)
+    };
 
 public:
     peer(btpro::queue_ref queue, btpro::dns_ref dns)
@@ -119,32 +121,36 @@ public:
 
     void on_connect()
     {
-        conn_.logon(stomptalk::v12::connect("one", "bob", "bobone"));
+        conn_.logon(stomptalk::tcp::logon("two", "max", "maxtwo"),
+            std::bind(&peer::on_logon, this, std::placeholders::_1));
     }
 
-    void on_logon()
+    void on_logon(const stomptalk::rabbitmq::header_store& hdr)
     {
-        stomptalk::tcp::subscribe subs("/queue/stompcl",
-            [&](btpro::buffer buf) {
-                cout() << "RECEIVE: " << buf.str() << endl2;
-                return;
-                stomptalk::tcp::send send("/queue/stompcl");
-                auto time_text = btdef::date::to_log_time();
-                send.payload(btpro::buffer(time_text));
-                conn_.send(std::move(send), [=]{
-                    cout() << "SENDED: " << time_text << endl2;
+        cout() << "LOGON" << std::endl << hdr.dump() << endl2;
+        cout() << "server=" << hdr.get("server") << std::endl;
+        cout() << "version=" << hdr.get(stomptalk::header::version()) << std::endl;
+
+        stomptalk::tcp::subscribe subs("/queue/mt4_trades",
+            [&](btpro::buffer buf, const stomptalk::rabbitmq::header_store& bufhdr) {
+                cout() << "RECEIVE! " << std::endl << bufhdr.dump() << std::endl << buf.str() << endl2;
+
+                stomptalk::tcp::send send("/queue/mt4_trades");
+                send.payload(btpro::buffer(btdef::date::to_log_time()));
+                conn_.send(std::move(send), [](const stomptalk::rabbitmq::header_store& hdr){
+                    //cout() << "SENDED!" << std::endl << hdr.dump() << endl2;
                 });
         });
 
-        conn_.subscribe(std::move(subs), [&]{
-            stomptalk::tcp::send send("/queue/stompcl");
-            auto time_text = btdef::date::to_log_time();
-            send.payload(btpro::buffer(time_text));
-            conn_.send(std::move(send), [=]{
-                cout() << "SENDED: " << time_text << endl2;
+        conn_.subscribe(std::move(subs), [&](const stomptalk::rabbitmq::header_store& hdr){
+            cout() << "SUBSCRIBE!" << std::endl << hdr.dump() << endl2;
+
+            stomptalk::tcp::send send("/queue/mt4_trades");
+            send.payload(btpro::buffer(btdef::date::to_log_time()));
+            conn_.send(std::move(send), [](const stomptalk::rabbitmq::header_store& hdr){
+                //cout() << "SENDED!" << std::endl << hdr.dump() << endl2;
             });
         });
-
     }
 };
 
