@@ -5,7 +5,6 @@
 #include "btpro/tcp/bevfn.hpp"
 #include "btdef/ref.hpp"
 #include "stomptalk/v12.hpp"
-#include "stomptalk/rabbitmq.hpp"
 #include "stomptalk/parser.hpp"
 #include "stomptalk/parser_hook.hpp"
 #include "stomptalk/antoull.hpp"
@@ -20,6 +19,13 @@
 #ifndef _WIN32
 #include <signal.h>
 #endif // _WIN32
+
+
+template <std::size_t N>
+constexpr auto mkview(const char (&text)[N]) noexcept
+{
+    return std::string_view(text, N - 1);
+}
 
 std::ostream& output(std::ostream& os)
 {
@@ -59,13 +65,10 @@ inline std::ostream& cerr(F fn)
         .write(text.data(), static_cast<std::streamsize>(text.size())));
 }
 
-#define MKREFSTR(x, y) \
-    static const auto x = btref::mkstr(std::cref(y))
-
 btpro::queue create_queue()
 {
-    MKREFSTR(libevent_str, "libevent-");
-    cout() << libevent_str << btpro::queue::version() << ' ' << '-' << ' ';
+    cout() << mkview("libevent-")
+           << btpro::queue::version() << ' ' << '-' << ' ';
 
     btpro::config conf;
     for (auto& i : conf.supported_methods())
@@ -86,6 +89,8 @@ class peer
 
     btpro::queue_ref queue_;
     btpro::dns_ref dns_;
+    std::string host_{};
+    int port_{};
 
     connection_type conn_{ queue_,
         std::bind(&peer::on_event, this, std::placeholders::_1),
@@ -98,59 +103,68 @@ public:
         , dns_(dns)
     {   }
 
-    void connect(const std::string& host, int port)
+    template<class Rep, class Period>
+    void connect(const std::string& host, int port,
+                 std::chrono::duration<Rep, Period> timeout)
     {
         cout([&]{
-            std::string text("connect to: ");
+            std::string text;
+            text += mkview("connect to: ");
             text += host;
             if (port)
                 text += ' ' + std::to_string(port);
             return text;
         });
 
-        conn_.connect(dns_, host, port);
+        conn_.connect(dns_, host, port, timeout);
+
+        host_ = host;
+        port_ = port;
     }
 
     void on_event(short)
     {
         // любое событие приводик к закрытию сокета
         queue_.once(std::chrono::seconds(5), [&](...){
-            connect("192.168.10.77", 61613);
+            connect(host_, port_, std::chrono::seconds(20));
         });
     }
 
     void on_connect()
     {
-        conn_.logon(stomptalk::tcp::logon("two", "max", "maxtwo"),
+        stomptalk::tcp::logon logon("two", "max", "maxtwo");
+        //logon.push(stomptalk::header::receipt("123"));
+        conn_.logon(std::move(logon),
             std::bind(&peer::on_logon, this, std::placeholders::_1));
     }
 
-    void on_logon(const stomptalk::rabbitmq::header_store& hdr)
+    void on_logon(stomptalk::tcp::packet logon)
     {
-        cout() << "LOGON" << std::endl << hdr.dump() << endl2;
-        cout() << "server=" << hdr.get("server") << std::endl;
-        cout() << "version=" << hdr.get(stomptalk::header::version()) << std::endl;
+        cout() << logon.dump() << std::endl;
 
-        stomptalk::tcp::subscribe subs("/queue/mt4_trades",
-            [&](btpro::buffer buf, const stomptalk::rabbitmq::header_store& bufhdr) {
-                cout() << "RECEIVE! " << std::endl << bufhdr.dump() << std::endl << buf.str() << endl2;
+        if (logon)
+        {
+            stomptalk::tcp::subscribe subs("/queue/mt4_trades",
+                [&](stomptalk::tcp::packet p) {
+                    cout() << p.dump() << std::endl;
+
+                    stomptalk::tcp::send send("/queue/mt4_trades");
+                    send.payload(btpro::buffer(btdef::date::to_log_time()));
+//                    conn_.send(std::move(send), [](stomptalk::tcp::packet s){
+//                        //cout() << s.dump() << std::endl;
+//                    });
+            });
+
+            conn_.subscribe(std::move(subs), [&](stomptalk::tcp::packet p){
+                cout() << p.dump() << std::endl;
 
                 stomptalk::tcp::send send("/queue/mt4_trades");
                 send.payload(btpro::buffer(btdef::date::to_log_time()));
-                conn_.send(std::move(send), [](const stomptalk::rabbitmq::header_store& hdr){
-                    //cout() << "SENDED!" << std::endl << hdr.dump() << endl2;
+                conn_.send(std::move(send), [](stomptalk::tcp::packet s){
+                    cout() << s.dump() << std::endl;
                 });
-        });
-
-        conn_.subscribe(std::move(subs), [&](const stomptalk::rabbitmq::header_store& hdr){
-            cout() << "SUBSCRIBE!" << std::endl << hdr.dump() << endl2;
-
-            stomptalk::tcp::send send("/queue/mt4_trades");
-            send.payload(btpro::buffer(btdef::date::to_log_time()));
-            conn_.send(std::move(send), [](const stomptalk::rabbitmq::header_store& hdr){
-                //cout() << "SENDED!" << std::endl << hdr.dump() << endl2;
             });
-        });
+        }
     }
 };
 
@@ -166,12 +180,9 @@ int main()
 
         peer p(queue, dns);
 
-        //stomptalk::asked ask;
-        //cout() << ask.id() << std::endl;
 #ifndef WIN32
         auto f = [&](auto...) {
-            MKREFSTR(stop_str, "stop!");
-            cerr() << stop_str << std::endl;
+            cerr() << mkview("stop!") << std::endl;
             queue.loop_break();
             return 0;
         };
@@ -185,7 +196,7 @@ int main()
         sterm.add();
 #endif // _WIN32
 
-        p.connect("192.168.10.77", 61613);
+        p.connect("192.168.10.77", 61613, std::chrono::seconds(20));
 
         queue.dispatch();
     }
