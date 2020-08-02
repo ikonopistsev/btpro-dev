@@ -68,7 +68,8 @@ inline std::ostream& cerr(F fn)
 btpro::queue create_queue()
 {
     cout() << mkview("libevent-")
-           << btpro::queue::version() << ' ' << '-' << ' ';
+           << btpro::queue::version()
+           << mkview(" - ");
 
     btpro::config conf;
     for (auto& i : conf.supported_methods())
@@ -116,10 +117,10 @@ public:
             return text;
         });
 
-        conn_.connect(dns_, host, port, timeout);
-
         host_ = host;
         port_ = port;
+
+        conn_.connect(dns_, host, port, timeout);
     }
 
     void on_event(short)
@@ -196,7 +197,7 @@ int main()
         sterm.add();
 #endif // _WIN32
 
-        p.connect("192.168.10.77", 61613, std::chrono::seconds(20));
+        p.connect("threadtux", 61613, std::chrono::seconds(20));
 
         queue.dispatch();
     }
