@@ -4,12 +4,10 @@
 #include "btdef/date.hpp"
 #include "btpro/tcp/bevfn.hpp"
 #include "btdef/ref.hpp"
-#include "stomptalk/v12.hpp"
 #include "stomptalk/parser.hpp"
 #include "stomptalk/parser_hook.hpp"
 #include "stomptalk/antoull.hpp"
 #include "stomptalk/btpro/connection.hpp"
-#include "stomptalk/v12.hpp"
 
 #include <iostream>
 #include <list>
@@ -141,28 +139,25 @@ public:
 
     void on_logon(stomptalk::tcp::packet logon)
     {
-        cout() << logon.dump() << std::endl;
-
+        cout() << logon.dump() << endl2;
         if (logon)
         {
             stomptalk::tcp::subscribe subs("/queue/mt4_trades",
                 [&](stomptalk::tcp::packet p) {
-                    cout() << p.dump() << std::endl;
-
+                    cout() << p.dump() << endl2;
                     stomptalk::tcp::send send("/queue/mt4_trades");
                     send.payload(btpro::buffer(btdef::date::to_log_time()));
-//                    conn_.send(std::move(send), [](stomptalk::tcp::packet s){
-//                        //cout() << s.dump() << std::endl;
-//                    });
+                    conn_.send(std::move(send), [](stomptalk::tcp::packet s){
+                        cout() << s.dump() << endl2;
+                    });
             });
 
             conn_.subscribe(std::move(subs), [&](stomptalk::tcp::packet p){
-                cout() << p.dump() << std::endl;
-
+                cout() << p.dump() << endl2;
                 stomptalk::tcp::send send("/queue/mt4_trades");
                 send.payload(btpro::buffer(btdef::date::to_log_time()));
                 conn_.send(std::move(send), [](stomptalk::tcp::packet s){
-                    cout() << s.dump() << std::endl;
+                    cout() << s.dump() << endl2;
                 });
             });
         }
