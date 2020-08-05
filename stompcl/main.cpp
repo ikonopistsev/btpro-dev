@@ -7,7 +7,7 @@
 #include "stomptalk/parser.hpp"
 #include "stomptalk/parser_hook.hpp"
 #include "stomptalk/antoull.hpp"
-#include "stomptalk/btpro/connection.hpp"
+#include "stompconn/connection.hpp"
 
 #include <iostream>
 #include <list>
@@ -84,7 +84,7 @@ btpro::queue create_queue()
 
 class peer
 {
-    typedef stomptalk::tcp::connection connection_type;
+    typedef stompconn::connection connection_type;
 
     btpro::queue_ref queue_;
     btpro::dns_ref dns_;
@@ -131,32 +131,32 @@ public:
 
     void on_connect()
     {
-        stomptalk::tcp::logon logon("two", "max", "maxtwo");
+        stompconn::logon logon("two", "max", "maxtwo");
         //logon.push(stomptalk::header::receipt("123"));
         conn_.logon(std::move(logon),
             std::bind(&peer::on_logon, this, std::placeholders::_1));
     }
 
-    void on_logon(stomptalk::tcp::packet logon)
+    void on_logon(stompconn::packet logon)
     {
         cout() << logon.dump() << endl2;
         if (logon)
         {
-            stomptalk::tcp::subscribe subs("/queue/mt4_trades",
-                [&](stomptalk::tcp::packet p) {
-                    cout() << p.dump() << endl2;
-                    stomptalk::tcp::send send("/queue/mt4_trades");
+            stompconn::subscribe subs("/queue/mt4_trades",
+                [&](stompconn::packet p) {
+                    //cout() << p.dump() << endl2;
+                    stompconn::send send("/queue/mt4_trades");
                     send.payload(btpro::buffer(btdef::date::to_log_time()));
-                    conn_.send(std::move(send), [](stomptalk::tcp::packet s){
-                        cout() << s.dump() << endl2;
+                    conn_.send(std::move(send), [](stompconn::packet s){
+                        //cout() << s.dump() << endl2;
                     });
             });
 
-            conn_.subscribe(std::move(subs), [&](stomptalk::tcp::packet p){
+            conn_.subscribe(std::move(subs), [&](stompconn::packet p){
                 cout() << p.dump() << endl2;
-                stomptalk::tcp::send send("/queue/mt4_trades");
+                stompconn::send send("/queue/mt4_trades");
                 send.payload(btpro::buffer(btdef::date::to_log_time()));
-                conn_.send(std::move(send), [](stomptalk::tcp::packet s){
+                conn_.send(std::move(send), [](stompconn::packet s){
                     cout() << s.dump() << endl2;
                 });
             });
@@ -192,7 +192,7 @@ int main()
         sterm.add();
 #endif // _WIN32
 
-        p.connect("threadtux", 61613, std::chrono::seconds(20));
+        p.connect("127.0.0.1", 61613, std::chrono::seconds(20));
 
         queue.dispatch();
     }
