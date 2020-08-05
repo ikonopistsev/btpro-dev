@@ -7,3 +7,6 @@
 [submodule "stomptalk"]
 	path = stomptalk
 	url = https://github.com/ikonopistsev/stomptalk.git
+[submodule "stompconn"]
+	path = stompconn
+	url = https://github.com/ikonopistsev/stompconn.git

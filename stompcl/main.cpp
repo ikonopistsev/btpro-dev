@@ -139,27 +139,64 @@ public:
 
     void on_logon(stompconn::packet logon)
     {
-        cout() << logon.dump() << endl2;
+        cout() << logon.payload() << endl2;
         if (logon)
         {
             stompconn::subscribe subs("/queue/mt4_trades",
                 [&](stompconn::packet p) {
                     //cout() << p.dump() << endl2;
-                    stompconn::send send("/queue/mt4_trades");
-                    send.payload(btpro::buffer(btdef::date::to_log_time()));
-                    conn_.send(std::move(send), [](stompconn::packet s){
-                        //cout() << s.dump() << endl2;
-                    });
+                    if (p)
+                    {
+                        stompconn::send send("/queue/mt4_trades");
+                        send.payload(btpro::buffer(btdef::date::to_log_time()));
+                        conn_.send(std::move(send), [&](stompconn::packet s){
+                            if (s)
+                            {
+                                //cout() << s.dump() << endl2;
+                            }
+                            else
+                            {
+                                cerr() << s.payload().str() << std::endl;
+                                on_event(BEV_EVENT_EOF);
+                            }
+                        });
+                    }
+                    else
+                    {
+                        cerr() << p.payload().str() << std::endl;
+                        on_event(BEV_EVENT_EOF);
+                    }
             });
 
             conn_.subscribe(std::move(subs), [&](stompconn::packet p){
-                cout() << p.dump() << endl2;
-                stompconn::send send("/queue/mt4_trades");
-                send.payload(btpro::buffer(btdef::date::to_log_time()));
-                conn_.send(std::move(send), [](stompconn::packet s){
-                    cout() << s.dump() << endl2;
-                });
+                if (p)
+                {
+                    cout() << p.payload() << endl2;
+                    stompconn::send send("/queue/mt4_trades");
+                    send.payload(btpro::buffer(btdef::date::to_log_time()));
+                    conn_.send(std::move(send), [&](stompconn::packet s){
+                        if (s)
+                        {
+                            cout() << s.dump() << endl2;
+                        }
+                        else
+                        {
+                            cerr() << s.payload().str() << std::endl;
+                            on_event(BEV_EVENT_EOF);
+                        }
+                    });
+                }
+                else
+                {
+                    cerr() << p.payload().str() << std::endl;
+                    on_event(BEV_EVENT_EOF);
+                }
             });
+        }
+        else
+        {
+            cerr() << logon.payload().str() << std::endl;
+            on_event(BEV_EVENT_EOF);
         }
     }
 };
