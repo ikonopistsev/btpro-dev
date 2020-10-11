@@ -17,6 +17,8 @@
 #include <signal.h>
 #endif // _WIN32
 
+using namespace std::literals;
+
 // - multicast client example
 
 std::ostream& output(std::ostream& os)
@@ -36,19 +38,9 @@ inline std::ostream& cout()
     return output(std::cout);
 }
 
-template<class T, std::size_t N>
-constexpr auto mksv(T const (&str)[N])
-{
-    return std::basic_string_view<T>(str);
-}
-
-#define MKREFSTR(x, y) \
-    constexpr auto x = mksv(y)
-
 btpro::queue create_queue()
 {
-    MKREFSTR(libevent_str, "libevent-");
-    cout() << libevent_str << btpro::queue::version() << ' ' << '-' << ' ';
+    cout() << "libevent-"sv << btpro::queue::version() << " - "sv;
 
     btpro::config conf;
     for (auto& i : conf.supported_methods())
@@ -69,14 +61,14 @@ int main(int argc, char* argv[])
 {
     try
     {
+        auto t = "123"sv;
+        return t.size();
         // инициализация wsa
         btpro::startup();
 
-        auto use = btdef::make_text("use: ");
-        auto app_name = mksv("mccl test");
         auto queue = create_queue();
-        cout() << use << queue.method() << std::endl << std::endl;
-        cout() << app_name << std::endl;
+        cout() << "use: "sv << queue.method() << std::endl << std::endl;
+        cout() << "mccl test"sv << std::endl;
 
         // сокеты для мультикаста портируемо биндятся на any
         auto sa = btpro::ipv4::any(4587);
@@ -134,8 +126,7 @@ int main(int argc, char* argv[])
                 // если произошел таймаут чтения генерируем ошибку
                 if (ef & EV_TIMEOUT)
                 {
-                    MKREFSTR(timeout_str, "timeout");
-                    cout() << timeout_str << std::endl;
+                    cout() << "timeout"sv << std::endl;
                 }
 
                 if (ef & EV_READ)
@@ -153,12 +144,8 @@ int main(int argc, char* argv[])
 
                     count += static_cast<std::size_t>(res);
 
-                    MKREFSTR(rx_str, "rx:");
-                    MKREFSTR(recv_str, "recv:");
-                    MKREFSTR(from_str, "from:");
-
-                    cout() << recv_str << ' ' << res << ' ' << from_str << ' ' 
-                        << dest << ' ' << rx_str << ' ' << count << std::endl;
+                    cout() << "recv:"sv << ' ' << res << ' ' << "from:"sv << ' '
+                        << dest << ' ' << "rx:"sv << ' ' << count << std::endl;
                 }
             }
             catch (const std::exception& e)
@@ -179,8 +166,7 @@ int main(int argc, char* argv[])
         be::evcore<be::evstack> sterm;
 
         auto f = [&](auto...) {
-            MKREFSTR(stop_str, "stop!");
-            cerr() << stop_str << std::endl;
+            cerr() << "stop!"sv << std::endl;
             queue.loop_break();
         };
 

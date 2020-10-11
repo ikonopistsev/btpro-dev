@@ -2,7 +2,7 @@ TEMPLATE = app
 
 CONFIG -= qt
 CONFIG -= app_bundle
-CONFIG += console c++14 warn_on
+CONFIG += console c++17 warn_on
 
 TARGET = tcpsrv
 
@@ -19,6 +19,7 @@ unix:!macx {
     CONFIG(release, debug|release) {
         QMAKE_POST_LINK=$(STRIP) $(TARGET)
     }
+    LIBS += -lrt
 }
 
 macx {
