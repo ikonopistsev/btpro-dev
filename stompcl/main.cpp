@@ -133,7 +133,7 @@ public:
     {
         stompconn::logon logon("two", "max", "maxtwo");
         //logon.push(stomptalk::header::receipt("123"));
-        conn_.logon(std::move(logon),
+        conn_.send(std::move(logon),
             std::bind(&peer::on_logon, this, std::placeholders::_1));
     }
 
@@ -168,7 +168,7 @@ public:
                     }
             });
 
-            conn_.subscribe(std::move(subs), [&](stompconn::packet p){
+            conn_.send(std::move(subs), [&](stompconn::packet p){
                 if (p)
                 {
                     cout() << p.payload() << endl2;
