@@ -6,24 +6,25 @@ CONFIG -= app_bundle
 SUBDIRS += \
     btdef \
     btpro \
+#    tcpcl
     evheap \
-    mcsrv \
+#    mcsrv \
     mccl \
-    tcpsrv \
-    tcpcl \
-    stompcl \
-    stomptalk \
-    stompconn
+#    tcpsrv \
+#    tcpcl \
+#    stompcl \
+#    stomptalk \
+#    stompconn
 
 btdef.subdir = btdef
 btpro.subdir = btpro
-evheap.subdir = evheap
-mcsrv.subdir = mcsrv
-mccl.subdir = mccl
-tcpsrv.subdir = tcpsrv
+#evheap.subdir = evheap
+#mcsrv.subdir = mcsrv
+#mccl.subdir = mccl
+#tcpsrv.subdir = tcpsrv
 tcpcl.subdir = tcpcl
-stompcl.subdir = stompcl
-stomptalk.subdir = stomptalk
-stompconn.subdir = stompconn
+#stompcl.subdir = stompcl
+#stomptalk.subdir = stomptalk
+#stompconn.subdir = stompconn
 
-stompcl.depends = btpro btdef stomptalk stompconn
+#stompcl.depends = btpro btdef stomptalk stompconn

@@ -3,6 +3,9 @@
 #include "btpro/ssl/bevsock.hpp"
 #include "btpro/uri.hpp"
 #include "btdef/date.hpp"
+#include "btpro/wslay/context.hpp"
+#include "btpro/ssl/base64.hpp"
+#include "btpro/curl/client.hpp"
 
 #include <iostream>
 #include <list>
@@ -45,8 +48,10 @@ inline std::ostream& cerr(F fn)
         .write(text.data(), static_cast<std::streamsize>(text.size())));
 }
 
+using namespace std::literals;
+
 #define MKREFSTR(x, y) \
-    static const auto x = btref::mkstr(std::cref(y))
+    static const auto x = y##sv
 
 btpro::queue create_queue()
 {
@@ -66,39 +71,48 @@ btpro::queue create_queue()
     return queue;
 }
 
+void connect(btpro::curl::client& cl, btpro::queue_ref)
+{
+    constexpr auto url =
+        "https://wt.roboforex.com/demopro/status?a=9741243f-85ae-11eb-ad92-3417ebee2def";
+//    constexpr auto proto =
+//        "SnapshotFullRefresh2";
+
+    cl.get([&](auto req){
+
+        req.push("pider-header-x", "ti-pidr");
+
+        req.set(std::string(url), [](btpro::curl::resp_ext res){
+            std::endl(std::cout);
+            std::cout << "http-code: "sv << btpro::curl::http_code(res) << std::endl;
+            std::cout << "data-size: "sv << res.buffer().size() << std::endl;
+            std::cout << "content-type: "sv << res.get("content-type") << std::endl;
+        });
+    });
+
+
+    cl.get(url, [](btpro::curl::resp_ext res){
+        std::endl(std::cout);
+        std::cout << "http-code: "sv << btpro::curl::http_code(res) << std::endl;
+        std::cout << "data-size: "sv << res.buffer().size() << std::endl;
+        std::cout << "content-type: "sv << res.get("content-type") << std::endl;
+    });
+}
+
 int main()
 {
     try
     {
+        btpro::ssl::rand::poll();
+
         // инициализация wsa
         btpro::startup();
+        btpro::curl::startup();
+
         auto queue = create_queue();
+
         btpro::dns dns;
         dns.create(queue, btpro::dns_initialize_nameservers);
-        auto ssl = btpro::ssl::client();
-
-        btpro::ssl::connector<BUFFEREVENT_SSL_CONNECTING,
-                BEV_OPT_CLOSE_ON_FREE> conn(ssl, queue, dns);
-
-        auto bev = conn.create();
-        btpro::sock_addr addr = btpro::sock_addr("localhost:22");
-        bev.connect(addr);
-
-        btpro::uri<btpro::detail::data_ptr<btpro::detail::uri_data<std::string>>> uri;
-        uri.set_scheme("http");
-        uri.set_host(std::string("localhost"));
-
-        btpro::uri<btpro::detail::uri_data<std::string>> text_uri, text_uri1;
-        text_uri.set_host("localhost");
-
-        cout() << "sizeof ptr_uri: " << sizeof(uri) << std::endl;
-        cout() << "sizeof text_uri: " << sizeof(text_uri) << std::endl;
-
-        text_uri = uri;
-        text_uri1 = text_uri;
-
-        text_uri1.set_user(btref::mkstr(std::cref("user")));
-
 
 #ifndef WIN32
         auto f = [&](auto...) {
@@ -116,6 +130,11 @@ int main()
         sterm.create(queue, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
         sterm.add();
 #endif // _WIN32
+
+
+        btpro::curl::client cl(queue);
+
+        connect(cl, queue);
 
         queue.dispatch();
     }

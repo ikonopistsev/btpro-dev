@@ -61,8 +61,6 @@ int main(int argc, char* argv[])
 {
     try
     {
-        auto t = "123"sv;
-        return t.size();
         // инициализация wsa
         btpro::startup();
 

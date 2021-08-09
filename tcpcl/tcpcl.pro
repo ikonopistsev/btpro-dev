@@ -11,14 +11,17 @@ CONFIG(release, debug|release) {
 }
 
 INCLUDEPATH += \
+    /usr/local/include \
     ../
 
 unix:!macx {
     CONFIG += link_pkgconfig
-    PKGCONFIG += libevent libevent_openssl libssl libcrypto
+    PKGCONFIG += libevent libevent_openssl libssl libcrypto libcurl
     CONFIG(release, debug|release) {
         QMAKE_POST_LINK=$(STRIP) $(TARGET)
     }
+
+    LIBS += -L/usr/local/lib64 -lwslay -L/usr/local/lib -levhtp -lpthread
 }
 
 macx {
@@ -28,3 +31,5 @@ macx {
 
 SOURCES += \
     main.cpp
+
+#openssl_hostname_validation.c hostcheck.c

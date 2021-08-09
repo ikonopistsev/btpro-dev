@@ -5,6 +5,7 @@
 #include "btpro/queue.hpp"
 #include "btpro/evcore.hpp"
 #include "btdef/date.hpp"
+#include "btpro/buffer.hpp"
 
 #include <iostream>
 #include <signal.h>
@@ -27,17 +28,51 @@ inline std::ostream& cout()
     return output(std::cout);
 }
 
-#define MKREFSTR(x, y) \
-    static const auto x = btref::mkstr(std::cref(y))
+using namespace std::literals;
 
 void call(evutil_socket_t, short, void *)
 {
-    MKREFSTR(method_str, "method!");
+    auto method_str = "method!"sv;
     cout() << method_str << std::endl;
 }
 
+class proxy_test
+{
+    btpro::queue& queue_;
+    btpro::evtfn<proxy_test> evh_{ *this, &proxy_test::call };
+    btpro::evs ev_{};
+public:
+    proxy_test(btpro::queue& queue)
+        : queue_(queue)
+    {
+        ev_.create(queue_, EV_TIMEOUT, evh_);
+        ev_.add(std::chrono::milliseconds(450));
+    }
+
+    void call()
+    {
+        auto proxy_str = "proxy!"sv;
+        cout() << proxy_str << std::endl;
+    }
+};
+
 int run()
 {
+    btpro::buffer buf;
+    buf.append(std::string("text"));
+    btpro::buffer bv;
+    bv.append("51"sv);
+    btpro::buffer bt;
+    bt.append(btdef::text("123"));
+    {
+        btpro::buffer_ref ref(buf);
+        btpro::buffer_ref btr(bt);
+        std::cout << "ref: " << ref.str() << std::endl;
+        ref.remove(btr);
+        std::cout << "btr: " << btr.str() << std::endl;
+        std::cout << "buf: " << buf.str() << std::endl;
+    }
+
     auto t = btdef::date::now().json_text();
     std::cout << t << std::endl;
     btdef::date d(t);
@@ -45,18 +80,17 @@ int run()
 
     btpro::queue queue;
     queue.create();
-    btpro::queue_ref q(queue);
 
     btpro::evh evh;
-    evh.create(q, EV_TIMEOUT, call, nullptr);
+    evh.create(queue, EV_TIMEOUT, call, nullptr);
 
     btpro::evs evs;
     auto l = [&](...) {
-        MKREFSTR(lambda_str, "+lambda!");
+        auto lambda_str = "+lambda!"sv;
         cout() << lambda_str << std::endl;
-        q.loop_break();
+        queue.loop_break();
     };
-    evs.create(q, EV_TIMEOUT, l);
+    evs.create(queue, EV_TIMEOUT, l);
 
     evh.add(std::chrono::milliseconds(300));
     evs.add(std::chrono::milliseconds(500));
@@ -66,20 +100,22 @@ int run()
 
     // one shot
     auto lambda = [&](...) {
-        MKREFSTR(lambda_str, "lambda");
+        auto lambda_str = "lambda"sv;
         cout() << lambda_str << std::endl;
     };
-    q.once(std::chrono::milliseconds(100), std::ref(lambda));
+    queue.once(std::chrono::milliseconds(100), std::ref(lambda));
 
-    q.once(std::chrono::milliseconds(110), [&](...) {
-        MKREFSTR(fn_str, "fn");
+    queue.once(std::chrono::milliseconds(110), [&](...) {
+        auto fn_str = "fn"sv;
         cout() << fn_str << std::endl;
         });
 
-    MKREFSTR(run_str, "run");
+    auto run_str = "run"sv;
     cout() << run_str << std::endl;
 
-    q.dispatch();
+    proxy_test p(queue);
+
+    queue.dispatch();
 
     return 0;
 }
