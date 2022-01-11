@@ -10,3 +10,6 @@
 [submodule "stompconn"]
 	path = stompconn
 	url = https://github.com/ikonopistsev/stompconn.git
+[submodule "libevent"]
+	path = libevent
+	url = https://github.com/libevent/libevent.git

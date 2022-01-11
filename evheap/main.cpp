@@ -1,7 +1,3 @@
-//#define _CRTDBG_MAP_ALLOC
-//#include <stdlib.h>
-//#include <crtdbg.h>
-
 #include "btpro/queue.hpp"
 #include "btpro/thread.hpp"
 #include "btpro/evcore.hpp"
@@ -177,14 +173,12 @@ int run()
     return 0;
 }
 
-int main(int, char**)
+int main()
 {
     btpro::startup();
     btpro::use_threads();
 
     run();
-
-    //_CrtDumpMemoryLeaks();
 
     return 0;
 }
