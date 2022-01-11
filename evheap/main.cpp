@@ -142,8 +142,7 @@ int run()
 
     btpro::evs::type evs;
     auto l = [&](...) {
-        auto lambda_str = "+lambda!"sv;
-        cout() << lambda_str << std::endl;
+        cout() << "+lambda!"sv << std::endl;
         queue.loop_break();
     };
     evs.create(queue, EV_TIMEOUT, l);
@@ -153,8 +152,7 @@ int run()
 
     // one shot
     auto lambda = [&] {
-        auto lambda_str = "lambda"sv;
-        cout() << lambda_str << std::endl;
+        cout() << "lambda"sv << std::endl;
     };
     queue.once(std::chrono::milliseconds(100), std::ref(lambda));
 
