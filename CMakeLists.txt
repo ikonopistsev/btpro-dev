@@ -23,4 +23,5 @@ add_subdirectory(btpro)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 add_subdirectory(evheap)
 add_subdirectory(mcsrv)
+add_subdirectory(mccl)
 

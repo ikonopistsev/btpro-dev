@@ -1,10 +1,9 @@
-#include "btpro/evcore.hpp"
+#include "btpro/ev.hpp"
 #include "btpro/queue.hpp"
 #include "btpro/socket.hpp"
 #include "btpro/ipv4/multicast_group.hpp"
 #include "btpro/ipv4/multicast_source_group.hpp"
 #include "btdef/date.hpp"
-#include "btdef/string.hpp"
 #include <string_view>
 
 #include <vector>
@@ -50,9 +49,7 @@ btpro::queue create_queue()
 #ifndef _WIN32
     conf.require_features(EV_FEATURE_ET|EV_FEATURE_O1);
 #endif //
-    btpro::queue queue;
-    queue.create(conf);
-    return queue;
+    return btpro::queue(conf);
 }
 
 // - using mccl [[[PORT] HOST] MULTICAST_SRC_GROUP...]
@@ -113,14 +110,12 @@ int main(int argc, char* argv[])
         }
 
         std::size_t count = 0;
-        auto fn = [&] (evutil_socket_t fd, btpro::event_flag_t ef) {
+        auto fn = [&] (btpro::socket sock, btpro::event_flag ef) {
             // получаем время для лога
             btdef::date time(queue.gettimeofday_cached());
 
             try
             {
-                btpro::socket sock(fd);
-
                 // если произошел таймаут чтения генерируем ошибку
                 if (ef & EV_TIMEOUT)
                 {
@@ -153,18 +148,16 @@ int main(int argc, char* argv[])
         };
 
         // создаем собыите приема данных
-        btpro::evcore<btpro::evstack> ev;
-        ev.create(queue, socket, EV_READ|EV_PERSIST|EV_TIMEOUT|EV_ET, fn);
-
-        // стартуем ожидание события приема данных
-        ev.add(std::chrono::seconds(20));
+        btpro::evs::socket ev(queue, socket, 
+            EV_READ|EV_PERSIST|EV_TIMEOUT|EV_ET, 
+            std::chrono::seconds(20), std::move(fn));
 
 #ifndef WIN32
-        be::evcore<be::evstack> sint;
-        be::evcore<be::evstack> sterm;
+        btpro::evs::type sint;
+        btpro::evs::type sterm;
 
-        auto f = [&](auto...) {
-            cerr() << "stop!"sv << std::endl;
+        btpro::socket_fun f = [&](auto...) {
+            cout() << "stop!"sv << std::endl;
             queue.loop_break();
         };
 
@@ -182,7 +175,7 @@ int main(int argc, char* argv[])
     }
     catch (const std::exception& e)
     {
-        std::cerr << e.what() << std::endl;
+        cerr() << e.what() << std::endl;
     }
 
     return 0;
