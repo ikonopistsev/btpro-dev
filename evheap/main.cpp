@@ -1,10 +1,7 @@
+#include "btpro/ev.hpp"
 #include "btpro/queue.hpp"
 #include "btpro/thread.hpp"
-#include "btpro/evcore.hpp"
 #include "btdef/date.hpp"
-#include "btpro/buffer.hpp"
-#include "btpro/dns.hpp"
-#include "btpro/ev.hpp"
 
 #include <thread>
 #include <iostream>
@@ -30,142 +27,135 @@ inline std::ostream& cout()
 
 using namespace std::literals;
 
-void call(evutil_socket_t, short, void *)
-{
-    cout() << "method!"sv << std::endl;
-}
-
 class proxy_test
 {
     btpro::queue& queue_;
 
-    using ev_type = btpro::evs::timer_fn<proxy_test>;
-    ev_type evs_{ queue_, EV_TIMEOUT, 
-        std::chrono::milliseconds(310), { &proxy_test::call, *this }};
-
-    btpro::evh::timer evtf_{queue_, EV_TIMEOUT, 
-        std::chrono::milliseconds(320), 
-        std::bind(&proxy_test::call_bind, this) };
-
-    btpro::timer_fun my_timer_ = []{
-        cout() << "proxy ref!"sv << std::endl;
-    };
-
-    btpro::evs::timer evsf_{queue_, EV_TIMEOUT, 
-        std::chrono::milliseconds(330), std::ref(my_timer_) };
-
     btpro::timer_fn<proxy_test> timer_{
         &proxy_test::do_timer, *this };
+
+    btpro::socket_fn<proxy_test> socket_{
+        &proxy_test::do_socket, *this };
+
+    btpro::generic_fn<proxy_test> generic_{
+        &proxy_test::do_generic, *this };
+
+    btpro::timer_fun timer_fun_{[]{
+        cout() << "+timer fun" << std::endl;
+    }};
+    btpro::ev_heap evh_{queue_, -1, EV_TIMEOUT, 
+        std::chrono::milliseconds(570), timer_fun_};
+
+    btpro::timer_fn<proxy_test> timer_fn_{
+        &proxy_test::do_timer_fn, *this };
+    btpro::ev_stack evs_{};
 
 public:
     proxy_test(btpro::queue& queue)
         : queue_(queue)
     {   
+        evs_.create(queue_, timer_fn_);
+        evs_.add(std::chrono::milliseconds(550));
+
         queue.once(std::chrono::milliseconds(400), timer_);
-    }
+        queue.once(std::chrono::milliseconds(450), socket_);
+        queue.once(std::chrono::milliseconds(500), generic_);
 
-    void call()
-    {
-        cout() << "proxy!"sv << std::endl;
-    }
-
-    void call_bind()
-    {
-        cout() << "bind!"sv << std::endl;
     }
 
     void do_timer()
     {
         cout() << "do_timer" << std::endl;
     }    
+
+    void do_socket(btpro::socket, short)
+    {
+        cout() << "do_socket" << std::endl;
+    }   
+
+    void do_generic(evutil_socket_t, short)
+    {
+        cout() << "do_generic" << std::endl;
+    }   
+
+    void do_timer_fn()
+    {
+        cout() << "+timer fn" << std::endl;
+    }       
 };
 
-void test_event(btpro::queue& queue)
+void test_queue(btpro::queue& queue)
 {
-    static btpro::ev_stack stev1;
-    stev1.create(queue, -1, EV_TIMEOUT, [](auto...){
-        cout() << "stev1" << std::endl;
-    }, nullptr);
-    stev1.add(std::chrono::milliseconds(340));
-    
-    static btpro::ev_heap stev2(queue, -1, EV_TIMEOUT, [](auto...){
-        cout() << "stev2" << std::endl;
-    }, nullptr);
-    stev2.add(std::chrono::milliseconds(350));
-
-    static btpro::stack_event stev3(queue, -1, EV_TIMEOUT, [](auto...){
-        cout() << "stev3" << std::endl;
-    }, nullptr);
-    auto tv = btpro::make_timeval(std::chrono::seconds(1));
-    btpro::detail::check_result("event_add", event_add(stev3, &tv));
-    //event_del(stev3);
-}
-
-void test_timer_requeue(btpro::queue& q1, btpro::queue& q2)
-{
-    q1.once(q2, std::chrono::milliseconds(20), []{
-        cout() << "timer requeue" << std::endl;
+    queue.once(std::chrono::milliseconds(150), [](btpro::socket, short){
+        cout() << "socket lambda" << std::endl;
     });
 
-    q1.once(q2, btpro::socket(), EV_TIMEOUT, std::chrono::milliseconds(30), 
-        [](auto...){
-            cout() << "socket requeue" << std::endl;
-        });
+    static btpro::timer_fun f1 = []{
+        cout() << "static fun" << std::endl;
+    };
+    queue.once(std::chrono::milliseconds(200), f1);
+
+    btpro::timer_fun f2 = []{
+        cout() << "move timer" << std::endl;
+    };
+    queue.once(std::chrono::milliseconds(250), std::move(f2));    
+
+    auto f3 = [](evutil_socket_t, short) {
+        cout() << "generic lambda" << std::endl;
+    };
+    queue.once(std::chrono::milliseconds(300), f3);
 }
 
-void test_queue_timer_ref(btpro::queue& queue)
+void test_requeue(btpro::queue& q1, btpro::queue& q2)
 {
-    static auto f = []{
-        cout() << "static ref!" << std::endl;
-    };
-    // function reference
-    queue.once(std::chrono::milliseconds(110), std::ref(f));
+    q1.once(q2, std::chrono::milliseconds(450), 
+        []{
+            cout() << "timer requeue"sv << std::endl;
+    });
+
+    q1.once(q2, btpro::socket(), EV_TIMEOUT, 
+        std::chrono::milliseconds(450), 
+            [](btpro::socket, short){
+                cout() << "socket requeue"sv << std::endl;
+    });
+
+    q1.once(q2, -1, EV_TIMEOUT, 
+        std::chrono::milliseconds(500), 
+            [](evutil_socket_t, short){
+                cout() << "generic requeue"sv << std::endl;
+    });
 }
 
 int run()
 {
     btpro::queue queue;
-    // работает только с use_threads();
     btpro::queue thr_queue;
     std::thread thr([&]{
-        // запускаем на 2 секунды вторую очередь
         thr_queue.loopexit(std::chrono::seconds(2));
         thr_queue.loop(EVLOOP_NO_EXIT_ON_EMPTY);
     });
 
-    test_timer_requeue(queue, thr_queue);
-    test_event(queue);
-    test_queue_timer_ref(queue);
+    test_requeue(queue, thr_queue);
+    test_queue(queue);
+    proxy_test p(queue);
 
-    btpro::evh::type evh;
-    evh.create(queue, -1, EV_TIMEOUT, call, nullptr);
-
-    btpro::evs::type evs;
-    auto l = [&](...) {
-        cout() << "+lambda!"sv << std::endl;
-        queue.loop_break();
+    btpro::timer_fun fh = []{
+        cout() << "ev_heap timer!"sv << std::endl;
     };
-    evs.create(queue, EV_TIMEOUT, l);
+    btpro::ev_heap evh(queue, -1, EV_TIMEOUT, 
+        std::chrono::milliseconds(600), fh);
 
-    evh.add(std::chrono::milliseconds(300));
-    evs.add(std::chrono::milliseconds(1200));
-
-    // one shot
-    auto lambda = [&] {
-        cout() << "lambda"sv << std::endl;
+    btpro::timer_fun fs = []{
+        cout() << "ev_stack timer!"sv << std::endl;
     };
-    queue.once(std::chrono::milliseconds(100), std::ref(lambda));
-
-    queue.once(std::chrono::milliseconds(110), []{
-        cout() << "fn"sv << std::endl;
-    });
+    btpro::ev_stack evs(queue, -1, EV_TIMEOUT, 
+        std::chrono::milliseconds(650), fs);
 
     cout() << "run"sv << std::endl;
 
-    proxy_test p(queue);
-
     queue.dispatch();
 
+    cout() << "join"sv << std::endl;
     thr.join();
 
     return 0;
