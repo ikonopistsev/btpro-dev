@@ -5,10 +5,7 @@
 
 #include <iostream>
 #include <string_view>
-
-#ifndef _WIN32
 #include <signal.h>
-#endif // _WIN32
 
 using namespace std::literals;
 
@@ -107,21 +104,19 @@ int main(int argc, char* argv[])
         // сразу же делаем рассылку
         ev.active(EV_TIMEOUT);
 
-#ifndef WIN32
         btpro::evs::type sint;
         btpro::evs::type sterm;
 
-        btpro::socket_fun f = [&](auto...) {
+        auto f = [&] {
             cerr() << "stop!"sv << std::endl;
             queue.loop_break();
         };
 
-        sint.create(queue, btpro::socket(SIGINT), EV_SIGNAL|EV_PERSIST, f);
+        sint.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
         sint.add();
 
-        sterm.create(queue, btpro::socket(SIGTERM), EV_SIGNAL|EV_PERSIST, f);
+        sterm.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
         sterm.add();
-#endif // _WIN32
 
         queue.dispatch();
     }

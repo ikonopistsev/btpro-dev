@@ -11,10 +11,7 @@
 #include <list>
 
 #include <iostream>
-
-#ifndef _WIN32
 #include <signal.h>
-#endif // _WIN32
 
 using namespace std::literals;
 
@@ -152,11 +149,10 @@ int main(int argc, char* argv[])
             EV_READ|EV_PERSIST|EV_TIMEOUT|EV_ET, 
             std::chrono::seconds(20), std::move(fn));
 
-#ifndef WIN32
         btpro::evs::type sint;
         btpro::evs::type sterm;
 
-        btpro::socket_fun f = [&](auto...) {
+        auto f = [&] {
             cout() << "stop!"sv << std::endl;
             queue.loop_break();
         };
@@ -166,7 +162,6 @@ int main(int argc, char* argv[])
 
         sterm.create(queue, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
         sterm.add();
-#endif // _WIN32
 
         queue.dispatch();
 
