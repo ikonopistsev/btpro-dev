@@ -149,18 +149,15 @@ int main(int argc, char* argv[])
             EV_READ|EV_PERSIST|EV_TIMEOUT|EV_ET, 
             std::chrono::seconds(20), std::move(fn));
 
-        btpro::evs::type sint;
-        btpro::evs::type sterm;
-
         auto f = [&] {
             cout() << "stop!"sv << std::endl;
             queue.loop_break();
         };
 
-        sint.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
+        btpro::evs::type sint(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
         sint.add();
 
-        sterm.create(queue, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
+        btpro::evs::type sterm(queue, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
         sterm.add();
 
         queue.dispatch();

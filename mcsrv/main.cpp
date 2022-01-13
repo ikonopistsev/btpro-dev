@@ -104,18 +104,15 @@ int main(int argc, char* argv[])
         // сразу же делаем рассылку
         ev.active(EV_TIMEOUT);
 
-        btpro::evs::type sint;
-        btpro::evs::type sterm;
-
         auto f = [&] {
-            cerr() << "stop!"sv << std::endl;
+            cout() << "stop!"sv << std::endl;
             queue.loop_break();
         };
 
-        sint.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
+        btpro::evs::type sint(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
         sint.add();
 
-        sterm.create(queue, SIGINT, EV_SIGNAL|EV_PERSIST, f);
+        btpro::evs::type sterm(queue, SIGTERM, EV_SIGNAL|EV_PERSIST, f);
         sterm.add();
 
         queue.dispatch();
