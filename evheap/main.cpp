@@ -47,8 +47,11 @@ class proxy_test
         std::chrono::milliseconds(570), timer_fun_};
 
     btpro::timer_fn<proxy_test> timer_fn_{
-        &proxy_test::do_timer_fn, *this };
+        &proxy_test::do_fn, *this };
     btpro::ev_stack evs_{};
+
+    btpro::evs::socket_fn<proxy_test> socket_fn_{queue_, btpro::socket(), EV_TIMEOUT,
+        std::chrono::milliseconds(600), {&proxy_test::do_fn, *this}};
 
 public:
     proxy_test(btpro::queue& queue)
@@ -78,10 +81,15 @@ public:
         cout() << "do_generic" << std::endl;
     }   
 
-    void do_timer_fn()
+    void do_fn()
     {
         cout() << "+timer fn" << std::endl;
-    }       
+    }    
+
+    void do_fn(btpro::socket, short)
+    {
+        cout() << "+socket fn" << std::endl;
+    }    
 };
 
 void test_queue(btpro::queue& queue)
