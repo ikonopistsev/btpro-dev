@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
         }
 
         btpro::socket socket;
-        btpro::socket::holder sock_holder(socket);
+        btpro::socket::guard sock_guard(socket);
         // создаем сокет на произвольном порту
         socket.create(dest.family(), btpro::sock_dgram);
 

@@ -71,6 +71,7 @@ int main(int argc, char* argv[])
         }
 
         btpro::socket socket;
+        btpro::socket::guard sock_guard(socket);
         // создаем сокет с возможностью повторного использования адреса
         socket.create(sa, btpro::sock_dgram, btpro::reuse_addr::on());
         if (argc > 2)
@@ -161,9 +162,6 @@ int main(int argc, char* argv[])
         sterm.add();
 
         queue.dispatch();
-
-        // сокет сам не закрывается
-        socket.close();
     }
     catch (const std::exception& e)
     {
