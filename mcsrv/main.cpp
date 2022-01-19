@@ -75,7 +75,6 @@ int main(int argc, char* argv[])
         socket.create(dest.family(), btpro::sock_dgram);
 
         btpro::socket_fun fn = [&](btpro::socket sock, btpro::event_flag) {
-            // подключаем сокет
             try
             {
                 // формируем пакет - дата

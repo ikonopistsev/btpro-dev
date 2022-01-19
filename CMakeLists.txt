@@ -7,7 +7,7 @@ if (WIN32)
   add_subdirectory(libevent)
   add_definitions(-DNOMINMAX -DWIN32_LEAN_AND_MEAN)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/libevent/include")
-  # fast fix for windows, build dir may be wrong, i use visual studio code
+  # fast fix for windows, build dir may be wrong, i use vscode
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/build/libevent/include")
 endif()
 
