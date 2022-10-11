@@ -7,4 +7,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(mcsrv main.cpp)
 
-target_link_libraries(mcsrv event)
+target_link_libraries(mcsrv event_core btpro btdef)

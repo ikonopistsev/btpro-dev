@@ -7,10 +7,12 @@
 #include <iostream>
 #include <signal.h>
 #include <cassert>
+#include <array>
+#include <charconv>
 
 std::ostream& output(std::ostream& os)
 {
-    auto log_time = btdef::date::log_time_text();
+    auto log_time = btdef::date::log_time();
     os << log_time << ' ';
     return os;
 }
@@ -174,11 +176,41 @@ int run()
     return 0;
 }
 
+void atoiperf() 
+{
+    constexpr std::array<std::string_view, 12> arr = {
+        "124345536"sv , "65878456745"sv, "934535667856"sv, 
+        "124345536"sv , "65878456745"sv, "934535667856"sv,
+        "124345536"sv , "65878456745"sv, "934535667856"sv, 
+        "124345536"sv , "65878456745"sv, "99999999999999999"sv 
+    };
+
+
+    std::size_t count = 10000000;
+    std::int64_t n;
+
+    auto b = btdef::date::now();
+    for (std::size_t i = 0; i < count; ++i) {
+        for (auto& text : std::as_const(arr)) {
+            n = btdef::conv::antou(text.data(), text.size());
+        }
+    }
+    cout() << "btdef::conv::antou: " << n << ' ' << btdef::date::diff_abs(b, btdef::date::now()) << std::endl;
+
+    b = btdef::date::now();
+    for (std::size_t i = 0; i < count; ++i) {
+        for (auto& text : arr) {
+            std::from_chars(text.data(), text.data() + text.size(), n);
+        }
+    }
+    cout() << "from_chars: " << n << ' ' << btdef::date::diff_abs(b, btdef::date::now()) << std::endl;
+}
+
 int main()
 {
     btpro::startup();
     btpro::use_threads();
-
+    atoiperf();
     run();
 
     return 0;
